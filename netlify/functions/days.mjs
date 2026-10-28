@@ -1,4 +1,5 @@
 import { getStore } from "@netlify/blobs";
+import { CATALOG } from "./shop.mjs";
 
 // Carnet partagé du Baromètre du bonheur.
 // GET  /api/days?month=2026-10          -> { days: { "2026-10-28": [humeurBilge, humeurLele], ... } }
@@ -64,6 +65,33 @@ export default async (req) => {
     const existing = await store.get(key);
     if (existing !== null && existing !== undefined) return json({ error: "déjà validé", value: Number(existing) }, 409);
     await store.set(key, String(value));
+    return json({ ok: true });
+  }
+
+  // Modifier : on peut reprendre sa réponse seulement le jour même (ensuite elle est définitive),
+  // et seulement si les pièces qu'elle a rapportées n'ont pas déjà été dépensées.
+  if (req.method === "DELETE") {
+    let body;
+    try { body = await req.json(); } catch { return json({ error: "json invalide" }, 400); }
+    const { day, who } = body || {};
+    if (!DAY.test(day || "") || !WHO.includes(who)) return json({ error: "données invalides" }, 400);
+    const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Zurich" });
+    if (day !== today) return json({ error: "Seule la réponse du jour peut être modifiée" }, 403);
+    const shop = getStore({ name: "boutique", consistency: "strong" });
+    const { blobs } = await store.list();
+    const answered = blobs.filter(({ key }) => key.endsWith("/" + who)).length;
+    let spent = 0, received = 0;
+    const { blobs: eb } = await shop.list({ prefix: "ev/" });
+    for (const { key } of eb) {
+      let e; try { e = JSON.parse(await shop.get(key)); } catch { continue; }
+      if (!e) continue;
+      if (e.type === "buy" && e.who === who) spent += CATALOG[e.item]?.price || 0;
+      if (e.type === "gift" && e.from === who) spent += CATALOG[e.item]?.price || 0;
+      if (e.type === "send" && e.from === who) spent += e.amount;
+      if (e.type === "send" && e.to === who) received += e.amount;
+    }
+    if ((answered - 1) * 20 + received - spent < 0) return json({ error: "Tu as déjà dépensé les pièces de cette réponse" }, 409);
+    await store.delete(`${day}/${who}`);
     return json({ ok: true });
   }
 

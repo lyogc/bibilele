@@ -86,6 +86,9 @@ button.mood[aria-pressed="true"] { border-color: var(--lav); background: var(--w
 .who.locked button.mood { cursor: default; }
 .who.locked button.mood:hover { transform: none; border-color: var(--wine); }
 .who.locked button.mood[aria-pressed="true"]:hover { border-color: var(--lav); }
+.unlock { background: transparent; border: 2px dashed var(--violet); color: var(--lav); font: 600 13px var(--font-body); padding: 5px 10px; cursor: pointer; }
+.unlock:hover { border-color: var(--lav); color: #fff4fb; }
+.vmsg { min-height: 1.2em; font-size: 13px; color: var(--sun); }
 button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
 .purse { display: flex; align-items: center; gap: 14px; background: var(--card); border: 3px solid var(--wine); padding: 12px 16px; }
 .purse .coin { flex: none; width: 32px; height: 32px; background: #ffd34e; border: 3px solid #b7791f; box-shadow: inset -4px -4px 0 #e9a43b, inset 3px 3px 0 #fff0a0; border-radius: 50%; }
@@ -1038,7 +1041,7 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
 
   var LABELS = ['Mal', 'Pas top', 'Bof', 'Bien', 'Au top'];
   var pickers = document.getElementById('pickers');
-  var buttons = { bilge: [], lele: [] }, vbtn = {}, boxes = {}, draft = {};
+  var buttons = { bilge: [], lele: [] }, vbtn = {}, ubtn = {}, vmsg = {}, boxes = {}, draft = {};
   ['bilge', 'lele'].forEach(function (who) {
     var box = document.createElement('div'); box.className = 'who';
     var h = document.createElement('h3'); h.textContent = NAMES[who] + ', ton humeur ce matin ?'; box.appendChild(h);
@@ -1055,7 +1058,10 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
     })(v);
     var vb = document.createElement('button'); vb.type = 'button'; vb.className = 'validate'; vb.textContent = 'Choisis ton humeur';
     vb.disabled = true; vb.addEventListener('click', function () { validate(who); });
-    box.appendChild(vb); vbtn[who] = vb; boxes[who] = box;
+    var ub = document.createElement('button'); ub.type = 'button'; ub.className = 'unlock'; ub.textContent = 'Modifier mon choix'; ub.hidden = true;
+    ub.addEventListener('click', function () { unvalidate(who); });
+    var vm2 = document.createElement('div'); vm2.className = 'vmsg'; vm2.setAttribute('aria-live', 'polite');
+    box.appendChild(vb); box.appendChild(ub); box.appendChild(vm2); vbtn[who] = vb; ubtn[who] = ub; vmsg[who] = vm2; boxes[who] = box;
     pickers.appendChild(box);
   });
 
@@ -1065,6 +1071,7 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
       buttons[who].forEach(function (b, i) { b.setAttribute('aria-pressed', state[who] === i + 1 ? 'true' : 'false'); });
       boxes[who].classList.toggle('locked', lk);
       vbtn[who].disabled = lk || !dv;
+      ubtn[who].hidden = !(lk && cur === todayKey);
       vbtn[who].textContent = lk ? 'Choix validé ✓' : (dv ? 'Valider mon choix : ' + LABELS[dv - 1] : 'Choisis ton humeur');
     });
     readout(); draw(now()); renderStats();
@@ -1106,6 +1113,23 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
     outbox.push({ day: cur, who: who, value: v });
     persist(); stateFor(cur); sync(); flush();
   }
+  function unvalidate(who) {       // reprendre sa réponse du jour (la veille, c'est définitif)
+    if (!isLocked(cur, who) || cur !== todayKey) return;
+    var day = cur, old = days[day][WHO[who]];
+    vmsg[who].textContent = '…';
+    fetch(API, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ day: day, who: who }) })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (x) {
+        if (!x.ok) { vmsg[who].textContent = x.j.error || 'Impossible pour le moment'; return; }
+        var e = (days[day] || [0, 0]).slice(); e[WHO[who]] = 0; days[day] = e;
+        outbox = outbox.filter(function (o) { return !(o.day === day && o.who === who); });
+        draft[day + who] = old; lastWrite[day + who] = Date.now();
+        vmsg[who].textContent = ''; persist();
+        if (cur === day) { stateFor(day); sync(); }
+        fetchShop();
+      })
+      .catch(function () { vmsg[who].textContent = 'Hors connexion : réessaie dans un instant.'; });
+  }
   function flush() {
     if (flushing || !outbox.length) return Promise.resolve();
     flushing = true;
@@ -1124,8 +1148,14 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
     if (Date.now() - (lastWrite[day + who] || 0) < 6000) return true;
     return outbox.some(function (o) { return o.day === day && o.who === who; });
   }
-  function mergeServer(obj) {
+  function mergeServer(obj, prefix) {
     var before = JSON.stringify(days);
+    if (prefix) Object.keys(days).forEach(function (k) {       // réponses reprises depuis un autre appareil
+      if (k.indexOf(prefix) !== 0) return;
+      var srv = obj[k] || [0, 0], loc = days[k].slice(), ch = false;
+      ['bilge', 'lele'].forEach(function (w) { var i = WHO[w]; if (loc[i] && !srv[i] && !pending(k, w)) { loc[i] = 0; ch = true; } });
+      if (ch) days[k] = loc;
+    });
     Object.keys(obj).forEach(function (k) {
       var srv = obj[k], loc = (days[k] || [0, 0]).slice();
       ['bilge', 'lele'].forEach(function (w) { var i = WHO[w]; if (srv[i] && !pending(k, w)) loc[i] = srv[i]; });
@@ -1239,7 +1269,7 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
   function fetchMonth(y, m) {
     return fetch(API + '?month=' + y + '-' + pad(m + 1), { cache: 'no-store' })
       .then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
-      .then(function (data) { var was = net; net = 'ok'; mergeServer(data.days || {}); if (was !== 'ok') renderStats(); })
+      .then(function (data) { var was = net; net = 'ok'; mergeServer(data.days || {}, y + '-' + pad(m + 1)); if (was !== 'ok') renderStats(); })
       .catch(function () { if (net !== 'off') { net = 'off'; renderStats(); } });
   }
   function poll() {
