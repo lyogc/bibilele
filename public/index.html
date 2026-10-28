@@ -86,6 +86,30 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
 @keyframes coinpop { 0% { transform: translateY(0) scaleX(1); } 40% { transform: translateY(-10px) scaleX(.2); } 80% { transform: translateY(-4px) scaleX(1); } 100% { transform: none; } }
 .purse-text b { font-family: var(--font-display); font-size: 26px; color: #ffd34e; }
 .purse-text small { display: block; color: var(--lav); }
+.shop { background: var(--card); border: 3px solid var(--wine); padding: 16px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.shop h2 { margin: 0; font-family: var(--font-display); font-weight: 500; font-size: 24px; color: #fff4fb; }
+.shop-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
+.me { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--violet); }
+.shop button { background: var(--plum); border: 2px solid var(--wine); color: var(--lav); font: 600 14px var(--font-body); padding: 5px 12px; min-height: 34px; cursor: pointer; }
+.shop button:hover:not(:disabled) { border-color: var(--magenta); }
+.shop button:disabled { opacity: .4; cursor: default; }
+.shop button[aria-pressed="true"], .shop button.on { background: var(--wine); border-color: var(--magenta); color: #fff4fb; }
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.cat-title { margin: 6px 0 0; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--violet); font-weight: 600; }
+.items { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.item { background: var(--plum); border: 2px solid var(--wine); padding: 8px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.item canvas { width: 100%; max-width: 96px; height: auto; aspect-ratio: 1; image-rendering: pixelated; align-self: center; background: #4a2d52; }
+.item b { color: #fff4fb; font-weight: 600; }
+.item .price { color: var(--sun); font-size: 14px; }
+.item .row { display: flex; flex-wrap: wrap; gap: 6px; }
+.item .row button { flex: 1 1 auto; padding: 4px 8px; font-size: 13px; }
+.sendrow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.sendrow input { background: var(--plum); border: 2px solid var(--wine); color: var(--lav); font: 600 14px var(--font-body); padding: 5px 8px; min-height: 34px; }
+.sendrow input[type=number] { width: 90px; }
+.sendrow input[type=text] { flex: 1 1 160px; min-width: 0; }
+.shopmsg { margin: 0; min-height: 1.4em; font-size: 14px; color: var(--sun); }
+.inbox { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+.inbox li { padding-left: 10px; border-left: 3px solid var(--magenta); }
 .stats { background: var(--card); border: 3px solid var(--wine); padding: 16px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .stats-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
 .stats h2 { margin: 0; font-family: var(--font-display); font-weight: 500; font-size: 24px; color: #fff4fb; }
@@ -147,6 +171,24 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
     <div class="coin" aria-hidden="true"></div>
     <div class="purse-text"><b id="coinTotal">0</b> <span id="coinLbl">pièce dans la cagnotte</span>
       <small id="coinWho"></small></div>
+  </section>
+
+  <section class="shop" id="shop" aria-label="Boutique">
+    <div class="shop-top">
+      <h2>Boutique</h2>
+      <div class="me">Je suis
+        <button type="button" data-me="bilge" aria-pressed="false">Bibi</button>
+        <button type="button" data-me="lele" aria-pressed="false">Lélé</button>
+      </div>
+    </div>
+    <div class="tabs" id="shopTabs">
+      <button type="button" data-tab="shop" aria-pressed="true">Boutique</button>
+      <button type="button" data-tab="closet" aria-pressed="false">Mon placard</button>
+      <button type="button" data-tab="send" aria-pressed="false">Envoyer</button>
+    </div>
+    <div id="shopBody"></div>
+    <p class="shopmsg" id="shopMsg" aria-live="polite"></p>
+    <ul class="inbox" id="inbox"></ul>
   </section>
 
   <section class="stats" aria-label="Statistiques">
@@ -260,6 +302,73 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
     head(g, who, mood, x, y, false);
   }
 
+
+  /* ---------- boutique : catalogue et dessin des objets ---------- */
+  var ITEMS = [
+    { id: 'cat', name: 'Chat', slot: 'pet', price: 80 }, { id: 'dog', name: 'Chien', slot: 'pet', price: 80 }, { id: 'duck', name: 'Canard', slot: 'pet', price: 50 },
+    { id: 'pullvert', name: 'Pull vert', slot: 'top', price: 40 }, { id: 'marin', name: 'Marinière', slot: 'top', price: 50 }, { id: 'cuir', name: 'Veste de cuir', slot: 'top', price: 70 },
+    { id: 'paille', name: 'Chapeau de paille', slot: 'head', price: 40 }, { id: 'couronne', name: 'Couronne', slot: 'head', price: 120 },
+    { id: 'lunettes', name: 'Lunettes de soleil', slot: 'face', price: 30 }, { id: 'echarpe', name: 'Écharpe', slot: 'neck', price: 30 }
+  ];
+  var ITEM = {}; ITEMS.forEach(function (i) { ITEM[i.id] = i; });
+  var SLOTNAME = { pet: 'Animaux', top: 'Habits', head: 'Chapeaux', face: 'Lunettes', neck: 'Écharpes' };
+  var TOPCOL = { pullvert: '#3f9a4a', marin: '#f4f1ea', cuir: '#2b2833' };
+  var look = { bilge: {}, lele: {} };            // ce que chacun porte (rempli par la boutique)
+
+  function topColor(who) { var it = look[who].top; return it ? TOPCOL[it] : null; }
+  function topDetail(c, it, bx, by) {
+    if (it === 'pullvert') { R(c, bx + 3, by, 4, 1, '#2f7a3a'); R(c, bx, by + 8, 10, 1, '#2f7a3a'); }
+    else if (it === 'marin') { for (var r = 1; r < 9; r += 2) R(c, bx, by + r, 10, 1, '#26396b'); }
+    else if (it === 'cuir') { R(c, bx + 5, by, 1, 9, '#9a98a8'); R(c, bx + 3, by, 2, 2, '#4a4655'); R(c, bx + 6, by, 2, 2, '#4a4655'); R(c, bx + 1, by + 5, 2, 1, '#9a98a8'); }
+  }
+  // chapeau, lunettes, écharpe : dessinés par-dessus la tête (ox, oy = coin de la tête 16x16)
+  function accessories(c, who, ox, oy, ex) {
+    function P(x, y, w, h, col) { R(c, ox + x, oy + y, w, h, col); }
+    var e = ex || look[who];
+    if (e.neck === 'echarpe') { P(3, 14, 10, 2, '#d6453d'); P(3, 14, 10, 1, '#ef6a5e'); P(10, 16, 3, 5, '#d6453d'); P(10, 18, 3, 1, '#f4f1ea'); }
+    if (e.face === 'lunettes') { P(4, 6, 3, 3, '#14101a'); P(9, 6, 3, 3, '#14101a'); P(7, 6, 2, 1, '#14101a'); P(4, 6, 1, 1, '#6a6a8a'); P(9, 6, 1, 1, '#6a6a8a'); }
+    if (e.head === 'paille') { P(4, -2, 8, 4, '#f0d080'); P(4, 1, 8, 1, '#c8402f'); P(0, 2, 16, 2, '#e0b85a'); P(1, 2, 14, 1, '#f0d080'); }
+    else if (e.head === 'couronne') { P(4, 0, 8, 2, '#ffd34e'); P(4, -2, 2, 2, '#ffd34e'); P(7, -3, 2, 3, '#ffd34e'); P(10, -2, 2, 2, '#ffd34e'); P(7, 0, 2, 1, '#ff5d8f'); P(4, 1, 8, 1, '#e9a43b'); }
+  }
+
+  function petDraw(c, kind, x, y, t, ph) {
+    // x, y : coin bas-gauche du sprite (les pattes touchent y)
+    var hop = Math.sin((t + ph) * 5) > 0.82 ? 1 : 0, wag = Math.round(Math.sin((t + ph) * 8)), blink = (Math.floor((t + ph) * 1.4) % 6) === 0;
+    y -= hop;
+    var E = '#1d1120';
+    if (kind === 'cat') {
+      var o = '#e9923c', d = '#b8661f';
+      R(c, x + 9, y - 6, 2, 2, o); R(c, x + 10 + (wag > 0 ? 1 : 0), y - 10, 2, 5, o); R(c, x + 10 + (wag > 0 ? 1 : 0), y - 10, 2, 1, d);
+      R(c, x + 1, y - 6, 8, 6, o); R(c, x + 2, y - 12, 7, 6, o);
+      R(c, x + 2, y - 14, 2, 2, o); R(c, x + 7, y - 14, 2, 2, o); R(c, x + 3, y - 13, 1, 1, '#f4a0a0'); R(c, x + 7, y - 13, 1, 1, '#f4a0a0');
+      R(c, x + 4, y - 12, 1, 2, d); R(c, x + 6, y - 12, 1, 2, d);
+      if (blink) { R(c, x + 3, y - 9, 2, 1, E); R(c, x + 7, y - 9, 2, 1, E); } else { R(c, x + 3, y - 10, 1, 2, E); R(c, x + 7, y - 10, 1, 2, E); }
+      R(c, x + 5, y - 8, 1, 1, '#f08a9a'); R(c, x + 4, y - 4, 3, 4, '#fff6ee'); R(c, x + 2, y - 1, 2, 1, '#fff6ee'); R(c, x + 7, y - 1, 2, 1, '#fff6ee');
+    } else if (kind === 'dog') {
+      var b = '#c8935a', db = '#7a4a2a';
+      R(c, x + 10, y - 7 + wag, 2, 3, b); R(c, x + 1, y - 6, 9, 6, b); R(c, x + 1, y - 11, 8, 6, b);
+      R(c, x, y - 11, 2, 5, db); R(c, x + 8, y - 11, 2, 5, db);
+      R(c, x + 3, y - 9, 1, 2, E); R(c, x + 6, y - 9, 1, 2, E); if (blink) { R(c, x + 3, y - 9, 1, 2, b); R(c, x + 6, y - 9, 1, 2, b); R(c, x + 3, y - 8, 1, 1, E); R(c, x + 6, y - 8, 1, 1, E); }
+      R(c, x + 3, y - 7, 4, 3, '#f1d2a8'); R(c, x + 4, y - 7, 2, 1, E);
+      if (Math.floor((t + ph) * 2) % 2) R(c, x + 4, y - 4, 2, 2, '#ef6a7e');
+      R(c, x + 2, y - 1, 2, 1, '#f1d2a8'); R(c, x + 7, y - 1, 2, 1, '#f1d2a8');
+    } else if (kind === 'duck') {
+      var yl = '#ffd34e', or = '#f08a2a';
+      R(c, x + 8, y - 6, 3, 3, yl); R(c, x + 1, y - 6, 8, 5, yl); R(c, x + 2, y - 11, 5, 6, yl);
+      R(c, x, y - 9, 3, 2, or); if (blink) R(c, x + 4, y - 9, 1, 1, E); else R(c, x + 4, y - 9, 1, 2, E);
+      R(c, x + 4, y - 5, 4, 3, '#f0b81c'); R(c, x + 2, y - 1, 2, 1, or); R(c, x + 6, y - 1, 2, 1, or);
+    }
+  }
+  // places des animaux selon le décor (pied de l'animal)
+  function drawPets(kindName, t) {
+    var hy = 79 + Math.round(Math.sin(t * 1.5) * 1.2);
+    var A = { bilge: [46, 96], lele: [124, 96] };
+    if (kindName === 'river') A = { bilge: [54, hy + 2], lele: [122, hy + 2] };
+    else if (kindName === 'sunset') A = { bilge: [22, 93], lele: [84, 93] };
+    else if (kindName === 'cloudy' || kindName === 'garden') A = { bilge: [40, 85], lele: [148, 85] };
+    ['bilge', 'lele'].forEach(function (w, i) { var pk = look[w].pet; if (pk) petDraw(g, pk, A[w][0], A[w][1], t, i * 0.7); });
+  }
+
   /* ---------- animation des personnages ---------- */
   function line(x0, y0, x1, y1, col) {
     var n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0), 1), i;
@@ -291,14 +400,16 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
   function actor(who, x, y, mood, pose) {
     pose = pose || {};
     var k = colors(who), hand = {}; y += pose.bob || 0;
+    var oc = topColor(who); if (oc) k.top = oc;
     legsFor(x, y, pose.legs || 'stand', pose.ph || 0, k);
-    R(g, x + 3, y + 14, 10, 9, k.top);
+    R(g, x + 3, y + 14, 10, 9, k.top); topDetail(g, look[who].top, x + 3, y + 14);
     ['L', 'R'].forEach(function (sd) {
       var a = pose[sd];
       if (Array.isArray(a)) hand[sd] = armTo(x, y, sd, a, k);
       else if (a !== 'none') hand[sd] = armTo(x, y, sd, [sd === 'L' ? -1 : 1, 9], k);
     });
     head(g, who, mood, x + (pose.lean || 0), y, false);
+    accessories(g, who, x + (pose.lean || 0), y);
     return hand;
   }
 
@@ -853,6 +964,7 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
     else if (k === 'summer') drawSummer(t, state, m);
     else if (k === 'sun') drawSun(t, state, m);
     else drawComfort(t, state, m);
+    drawPets(k, t);
   }
 
   var TEXTS = {
@@ -938,7 +1050,7 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
   function parseKey(k) { var q = k.split('-'); return new Date(+q[0], +q[1] - 1, +q[2]); }
   var todayKey = ymd(new Date());
   /* ---------- carnet partagé (fonction Netlify /api/days) ---------- */
-  var CACHE = 'barometre-bonheur-cache-v3', OUTBOX = 'barometre-bonheur-outbox-v2', API = '/api/days';
+  var CACHE = 'barometre-bonheur-cache-v3', OUTBOX = 'barometre-bonheur-outbox-v2', API = '/api/days', SHOPAPI = '/api/shop';
   var WHO = { bilge: 0, lele: 1 }, outbox = [], lastWrite = {}, net = 'unknown', flushing = false;
   try { var raw = localStorage.getItem(CACHE); if (raw) days = JSON.parse(raw) || {}; } catch (e) { days = {}; }
   try { var rawO = localStorage.getItem(OUTBOX); if (rawO) outbox = JSON.parse(rawO) || []; } catch (e) { outbox = []; }
@@ -962,7 +1074,7 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
         if (!r.ok) throw new Error('http ' + r.status);
         net = 'ok';
         outbox = outbox.filter(function (x) { return !(x.day === o.day && x.who === o.who && x.value === o.value); });
-        persist(); flushing = false; renderStats(); fetchCoins();
+        persist(); flushing = false; renderStats(); fetchShop();
         return flush();
       })
       .catch(function () { net = 'off'; flushing = false; renderStats(); });
@@ -983,25 +1095,107 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
     if (JSON.stringify(days) !== before) { persist(); sync(); }
     renderCoins();
   }
-  var coinSrv = null, coinShown = -1;
+  var coinShown = -1, shopState = null;
   function renderCoins() {
     var c = { bilge: 0, lele: 0 };
-    if (coinSrv) { c = { bilge: coinSrv.bilge, lele: coinSrv.lele }; }
-    if (!coinSrv) Object.keys(days).forEach(function (k) { var e = days[k]; if (e[0]) c.bilge++; if (e[1]) c.lele++; });
-    if (coinSrv) outbox.forEach(function (o) { if (!coinSrv.keys[o.day + '/' + o.who]) c[o.who]++; });
+    if (shopState) c = { bilge: shopState.balance.bilge, lele: shopState.balance.lele };
+    else Object.keys(days).forEach(function (k) { var e = days[k]; if (e[0]) c.bilge += 20; if (e[1]) c.lele += 20; });
     var tot = c.bilge + c.lele;
     document.getElementById('coinTotal').textContent = tot;
-    document.getElementById('coinLbl').textContent = (tot > 1 ? 'pièces' : 'pièce') + ' dans la cagnotte';
-    document.getElementById('coinWho').textContent = 'Bibi ' + c.bilge + ' · Lélé ' + c.lele + ' — 1 pièce chacun par jour où l\u2019on répond';
+    document.getElementById('coinLbl').textContent = 'pièces au total';
+    document.getElementById('coinWho').textContent = 'Bibi ' + c.bilge + ' · Lélé ' + c.lele + ' — 20 pièces par jour où l\u2019on répond';
     if (coinShown >= 0 && tot > coinShown) { var el = document.querySelector('.purse .coin'); el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); }
     coinShown = tot;
   }
-  function fetchCoins() {
-    return fetch(API + '?coins=1', { cache: 'no-store' })
-      .then(function (r) { if (!r.ok) throw new Error('http'); return r.json(); })
-      .then(function (d) { coinSrv = { bilge: d.bilge || 0, lele: d.lele || 0, keys: d.keys || {} }; renderCoins(); })
-      .catch(function () {});
+  /* ---------- boutique : écrans et actions ---------- */
+  var NAMES = { bilge: 'Bibi', lele: 'Lélé' }, me = null, tab = 'shop', giftMsg = '', sendAmt = '', sendMsg = '', shopSig = '';
+  try { me = localStorage.getItem('bbl-me'); if (me !== 'bilge' && me !== 'lele') me = null; } catch (e) { me = null; }
+  function oth(w) { return w === 'bilge' ? 'lele' : 'bilge'; }
+  function say(t) { document.getElementById('shopMsg').textContent = t || ''; }
+  function icon(it) {
+    var cv = document.createElement('canvas'), c, w = me || 'bilge';
+    if (it.slot === 'pet') { cv.width = 24; cv.height = 24; c = cv.getContext('2d'); petDraw(c, it.id, 6, 20, 0, 0); }
+    else if (it.slot === 'top') { cv.width = 24; cv.height = 24; c = cv.getContext('2d'); R(c, 7, 8, 10, 9, TOPCOL[it.id]); topDetail(c, it.id, 7, 8); R(c, 5, 8, 2, 8, TOPCOL[it.id]); R(c, 17, 8, 2, 8, TOPCOL[it.id]); R(c, 5, 16, 2, 2, '#d9a47e'); R(c, 17, 16, 2, 2, '#d9a47e'); }
+    else { cv.width = 24; cv.height = 28; c = cv.getContext('2d'); var ex = {}; ex[it.slot] = it.id; head(c, w, 'neutral', 4, 6, false); accessories(c, w, 4, 6, ex); }
+    return cv;
   }
+  function mkel(tag, cls, txt) { var e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
+  function btn(label, fn, dis, on) { var b = mkel('button', on ? 'on' : '', label); b.type = 'button'; b.disabled = !!dis; b.addEventListener('click', fn); return b; }
+  function post(body, okMsg) {
+    say('…');
+    return fetch(SHOPAPI, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (x) { say(x.ok ? okMsg : (x.j.error || 'Erreur')); return fetchShop(true); })
+      .catch(function () { say('Hors connexion : réessaie dans un instant.'); });
+  }
+  function renderShop() {
+    var body = document.getElementById('shopBody'), inbox = document.getElementById('inbox');
+    document.querySelectorAll('[data-me]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-me') === me)); });
+    document.querySelectorAll('[data-tab]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-tab') === tab)); });
+    body.textContent = ''; inbox.textContent = '';
+    if (!shopState) { body.appendChild(mkel('p', 'note', 'La boutique a besoin du serveur : elle apparaîtra sur le vrai site (là, tu es hors connexion).')); return; }
+    if (!me) { body.appendChild(mkel('p', 'note', 'Commence par dire qui tu es (Bibi ou Lélé) juste au-dessus.')); }
+    else {
+      var bal = shopState.balance[me], other = oth(me);
+      body.appendChild(mkel('p', 'note', 'Ton porte-monnaie : ' + bal + ' pièces'));
+      if (tab === 'shop') {
+        var mi = mkel('div', 'sendrow'); var gi = mkel('input'); gi.type = 'text'; gi.maxLength = 80; gi.placeholder = 'Mot doux pour un cadeau (facultatif)'; gi.value = giftMsg;
+        gi.addEventListener('input', function () { giftMsg = gi.value; }); mi.appendChild(gi); body.appendChild(mi);
+        ['pet', 'top', 'head', 'face', 'neck'].forEach(function (sl) {
+          body.appendChild(mkel('p', 'cat-title', SLOTNAME[sl]));
+          var grid = mkel('div', 'items');
+          ITEMS.filter(function (i) { return i.slot === sl; }).forEach(function (it) {
+            var price = (shopState.catalog && shopState.catalog[it.id]) || it.price, mine = shopState.owned[me].indexOf(it.id) >= 0, his = shopState.owned[other].indexOf(it.id) >= 0;
+            var card = mkel('div', 'item'); card.appendChild(icon(it)); card.appendChild(mkel('b', '', it.name)); card.appendChild(mkel('span', 'price', price + ' pièces'));
+            var row = mkel('div', 'row');
+            row.appendChild(btn(mine ? 'Possédé' : 'Acheter', function () { post({ action: 'buy', who: me, item: it.id }, it.name + ' acheté !'); }, mine || bal < price));
+            row.appendChild(btn('Offrir à ' + NAMES[other], function () { post({ action: 'gift', from: me, item: it.id, msg: giftMsg }, 'Cadeau envoyé à ' + NAMES[other] + ' !'); giftMsg = ''; }, his || bal < price));
+            card.appendChild(row); grid.appendChild(card);
+          });
+          body.appendChild(grid);
+        });
+      } else if (tab === 'closet') {
+        var mine2 = ITEMS.filter(function (i) { return shopState.owned[me].indexOf(i.id) >= 0; });
+        if (!mine2.length) body.appendChild(mkel('p', 'note', 'Ton placard est vide. Un tour à la boutique ?'));
+        var grid2 = mkel('div', 'items');
+        mine2.forEach(function (it) {
+          var worn = shopState.equipped[me][it.slot] === it.id, card = mkel('div', 'item'); card.appendChild(icon(it)); card.appendChild(mkel('b', '', it.name));
+          card.appendChild(btn(worn ? 'Retirer' : 'Porter', function () { post({ action: 'equip', who: me, item: worn ? null : it.id, slot: it.slot }, worn ? 'Retiré.' : 'Porté !'); }, false, worn));
+          grid2.appendChild(card);
+        });
+        body.appendChild(grid2);
+      } else {
+        var row2 = mkel('div', 'sendrow'), am = mkel('input'), mg = mkel('input');
+        am.type = 'number'; am.min = 1; am.max = bal; am.placeholder = 'Pièces'; am.value = sendAmt; am.addEventListener('input', function () { sendAmt = am.value; });
+        mg.type = 'text'; mg.maxLength = 80; mg.placeholder = 'Un petit mot (facultatif)'; mg.value = sendMsg; mg.addEventListener('input', function () { sendMsg = mg.value; });
+        row2.appendChild(am); row2.appendChild(mg);
+        row2.appendChild(btn('Envoyer à ' + NAMES[other], function () {
+          var n = parseInt(sendAmt, 10); if (!(n >= 1)) { say('Indique un nombre de pièces.'); return; }
+          post({ action: 'send', from: me, amount: n, msg: sendMsg }, n + ' pièces envoyées à ' + NAMES[other] + ' !'); sendAmt = ''; sendMsg = '';
+        }));
+        body.appendChild(row2);
+      }
+    }
+    (shopState.events || []).slice(0, 6).forEach(function (e) {
+      var t = e.type === 'gift' ? NAMES[e.from] + ' a offert « ' + (ITEM[e.item] ? ITEM[e.item].name : e.item) + ' » à ' + NAMES[e.to]
+        : NAMES[e.from] + ' a envoyé ' + e.amount + ' pièces à ' + NAMES[e.to];
+      if (e.msg) t += ' : « ' + e.msg + ' »';
+      inbox.appendChild(mkel('li', '', t));
+    });
+  }
+  document.querySelectorAll('[data-me]').forEach(function (b) { b.addEventListener('click', function () { me = b.getAttribute('data-me'); try { localStorage.setItem('bbl-me', me); } catch (e) {} say(''); renderShop(); }); });
+  document.querySelectorAll('[data-tab]').forEach(function (b) { b.addEventListener('click', function () { tab = b.getAttribute('data-tab'); say(''); renderShop(); }); });
+  function fetchShop(force) {
+    return fetch(SHOPAPI, { cache: 'no-store' })
+      .then(function (r) { if (!r.ok) throw new Error('http'); return r.json(); })
+      .then(function (d) {
+        var sig = JSON.stringify(d); shopState = d; look = { bilge: d.equipped.bilge || {}, lele: d.equipped.lele || {} };
+        renderCoins();
+        if (force || sig !== shopSig) { shopSig = sig; var a = document.activeElement; if (!(a && a.tagName === 'INPUT') || force) renderShop(); }
+      })
+      .catch(function () { if (!shopState) renderShop(); });
+  }
+
   function fetchMonth(y, m) {
     return fetch(API + '?month=' + y + '-' + pad(m + 1), { cache: 'no-store' })
       .then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
@@ -1011,7 +1205,7 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
   function poll() {
     if (document.hidden || !vm) return;
     flush().then(function () {
-      fetchMonth(vm.y, vm.m); fetchCoins();
+      fetchMonth(vm.y, vm.m); fetchShop();
       var c = parseKey(cur);
       if (c.getFullYear() !== vm.y || c.getMonth() !== vm.m) fetchMonth(c.getFullYear(), c.getMonth());
     });
@@ -1108,7 +1302,7 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
     el('facts').innerHTML = f.map(function (t) { return '<li>' + t + '</li>'; }).join('');
   }
 
-  setDay(todayKey); renderCoins(); fetchCoins();
+  setDay(todayKey); renderCoins(); renderShop(); fetchShop();
   if (!reduce) {
     (function frame() {
       var f = Math.floor(now() * 10);
