@@ -374,7 +374,9 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
     var hy = 79 + Math.round(Math.sin(t * 1.5) * 1.2);
     var A = { bilge: [46, 96], lele: [124, 96] };
     if (kindName === 'river') A = { bilge: [54, hy + 2], lele: [122, hy + 2] };
-    else if (kindName === 'sunset') A = { bilge: [22, 93], lele: [84, 93] };
+    else if (kindName === 'sunset') A = { bilge: [22, 93], lele: [118, 93] };
+    else if (kindName === 'wait') A = { bilge: [-6, 106], lele: [196, 106] };
+    else if (kindName === 'poppies') A = { bilge: [38, 100], lele: [142, 100] };
     else if (kindName === 'cloudy' || kindName === 'garden') A = { bilge: [40, 85], lele: [148, 85] };
     ['bilge', 'lele'].forEach(function (w, i) { var pk = look[w].pet; if (pk) petDraw(g, pk, A[w][0] + CREW, A[w][1], t, i * 0.7); });
   }
@@ -580,23 +582,63 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
 
   /* ---------- scènes ---------- */
   function drawWait(t, s, m) {
-    sky([['#5a1f4e', 0, 22], ['#7a2a5c', 22, 40], ['#a8336f', 40, 58], ['#c4558f', 58, 72], ['#d98ab5', 72, 90]]);
-    for (var i = 0; i < 100; i++) {
-      var sx = Math.floor(rnd(i + 3) * W) - DX, sy = Math.floor(rnd(i + 90) * (60 + DY)) - DY;
-      if (Math.sin(t * 2 + i * 1.7) > -0.3) R(g, sx, sy, 1, 1, i % 7 === 0 ? '#fff0a0' : '#fbe9f5');
+    var i, j, k, SK = ['#2f6f4a', '#4f9a5a', '#7ac07a'];
+    // mur, plafond, sol
+    R(g, -DX, -DY, W, 146, '#cdb4e0');
+    for (i = 0; i <= W; i += 24) R(g, -DX + i, -DY, 12, 146, '#d4bce5');
+    R(g, -DX, -DY, W, 5, '#8a6aa8');
+    [-30, 50, 130, 210].forEach(function (lx) { R(g, lx, -49, 36, 2, '#fff6c8'); g.globalAlpha = 0.10; R(g, lx - 4, -47, 44, 8, '#fff6c8'); g.globalAlpha = 1; });
+    R(g, -DX, 88, W, 4, '#8a6aa8');
+    R(g, -DX, 92, W, 16, '#5a3f6e');
+    for (i = 0; i < 16; i++) R(g, -DX + i * 20, 92, 1, 16, '#6e5084');
+    R(g, -DX, 100, W, 1, '#6e5084');
+    // fenêtre sur la ville
+    R(g, 74, 2, 40, 64, '#f3ead8');
+    var gl = [['#9fd0ee', 4, 20], ['#bfe0f2', 24, 18], ['#ffe2c4', 42, 22]];
+    gl.forEach(function (q) { R(g, 76, q[1], 36, q[2], q[0]); });
+    g.save(); g.beginPath(); g.rect(76, 4, 36, 60); g.clip();
+    cloud(drift(t, 20, 2), 10, 0.5, '#ffffff', '#d8e8f4'); cloud(drift(t, 90, 1.5), 22, 0.4, '#ffffff', '#d8e8f4');
+    var bl = [[0, 10, 26], [10, 9, 20], [18, 12, 36], [30, 8, 24], [38, 10, 18], [26, 6, 14]];
+    bl.forEach(function (q, n) { var bx = 76 + q[0], by = 64 - q[2]; R(g, bx, by, q[1], q[2], n % 2 ? '#7a8ab8' : '#6a76a8'); for (var yy = by + 3; yy < 62; yy += 5) for (var xx = bx + 2; xx < bx + q[1] - 1; xx += 4) if (rnd(xx * 3 + yy) > 0.45) R(g, xx, yy, 2, 2, '#ffe898'); });
+    g.restore();
+    R(g, 93, 4, 2, 60, '#f3ead8'); R(g, 76, 34, 36, 2, '#f3ead8'); R(g, 72, 64, 44, 3, '#e8d8c8');
+    R(g, 78, 58, 6, 6, '#c8704a'); foliage(77, 53, 8, 6, SK, 3); R(g, 102, 58, 6, 6, '#c8704a'); foliage(101, 53, 8, 6, SK, 8);
+    // horloge
+    disc(g, 95, -24, 8, '#3a2a48'); disc(g, 95, -24, 7, '#f3ead8');
+    var d0 = new Date(), mn = d0.getMinutes() / 60 * 6.283, hr = (d0.getHours() % 12 + d0.getMinutes() / 60) / 12 * 6.283, sc = t * 6.283 / 6;
+    line(95, -24, 95 + Math.sin(mn) * 5, -24 - Math.cos(mn) * 5, '#2b1a2e'); line(95, -24, 95 + Math.sin(hr) * 3, -24 - Math.cos(hr) * 3, '#2b1a2e'); R(g, 95 + Math.sin(sc) * 6, -24 - Math.cos(sc) * 6, 1, 1, '#d6453d');
+    // tableau blanc et affiche
+    R(g, -36, -32, 58, 34, '#8a6aa8'); R(g, -34, -30, 54, 30, '#f6f3ee');
+    [['#ffd34e', -30, -27], ['#ff8fb8', -18, -26], ['#7ac8f0', -6, -27], ['#9be07a', 6, -26], ['#ffd34e', -26, -14], ['#ff8fb8', -12, -13]].forEach(function (q) { R(g, q[1], q[2], 8, 8, q[0]); R(g, q[1] + 1, q[2] + 2, 5, 1, '#8a6a4a'); R(g, q[1] + 1, q[2] + 4, 4, 1, '#8a6a4a'); });
+    R(g, 4, -12, 12, 1, '#6a7ab0'); R(g, 4, -8, 9, 1, '#6a7ab0'); R(g, 4, -4, 14, 1, '#d6453d');
+    R(g, 168, -30, 32, 42, '#3a2a48'); R(g, 170, -28, 28, 38, '#ffd7a8'); R(g, 170, -8, 28, 18, '#e8604a'); mountain(184, -20, 10, 14, '#7a3a6a', '#a8336f', '#fff4fb');
+    disc(g, 190, -20, 4, '#fff2a8');
+    R(g, 206, 6, 44, 2, '#8a5a3a'); [['#d6453d', 208], ['#3b7fd6', 213], ['#ffd34e', 218], ['#2f6f4a', 223], ['#a8336f', 228], ['#f3ead8', 233]].forEach(function (q, n) { R(g, q[1], -2 - (n % 3), 4, 8 + (n % 3), q[0]); });
+    // plantes
+    R(g, -42, 78, 12, 12, '#c8704a'); R(g, -42, 78, 12, 2, '#e08a5a'); foliage(-48, 46, 24, 34, SK, 21);
+    R(g, 214, 78, 12, 12, '#c8704a'); R(g, 214, 78, 12, 2, '#e08a5a'); foliage(208, 48, 24, 32, SK, 31);
+    // postes de travail
+    function desk(x, who, px, nm) {
+      var py = HY + 2 + (Math.floor(t * 1.2 + (who === 'lele' ? 0.5 : 0)) % 2 ? 0 : 0), k2 = colors(who), oc = topColor(who);
+      if (oc) k2.top = oc;
+      var lk = s[who] > 0, mood = lk ? MOODNAMES[s[who] - 1] : (draft[cur + who] ? MOODNAMES[draft[cur + who] - 1] : 'neutral');
+      R(g, px - 1, 76, 18, 16, '#4a3a5c'); R(g, px - 1, 76, 18, 2, '#6a5a7c'); R(g, px + 3, 74, 10, 3, '#6a5a7c');
+      actor(who, px, py + (Math.sin(t * 2 + px) > 0.9 ? 1 : 0), mood, { legs: 'hide', L: 'none', R: 'none', lean: Math.floor(t * 0.5 + px) % 4 === 0 ? 1 : 0 });
+      g.globalAlpha = 0.08 + 0.04 * Math.sin(t * 3 + px); R(g, px + 3, py + 4, 10, 10, '#bfe4ff'); g.globalAlpha = 1;
+      accessories(g, who, px, py);
+      // bras qui tapent (derrière l'écran)
+      var ta = Math.floor(t * 9 + px) % 2, tb = Math.floor(t * 9 + px + 1) % 3 === 0 ? 1 : 0;
+      thick(px + 2, py + 17, px - 3, 87 + ta, k2.top); R(g, px - 4, 86 + ta, 2, 2, k2.skin);
+      thick(px + 13, py + 17, px + 19, 87 + tb, k2.top); R(g, px + 18, 86 + tb, 2, 2, k2.skin);
+      if (who === 'bilge') { R(g, px - 3, 83, 22, 7, '#3a3a4c'); R(g, px - 3, 83, 22, 1, '#5a5a70'); R(g, px + 6, 85, 4, 3, '#e8e8f0'); R(g, px - 4, 89, 24, 1, '#2a2a3a'); }
+      else { R(g, px - 3, 79, 22, 11, '#2a2a3a'); R(g, px - 3, 79, 22, 1, '#4a4a5c'); R(g, px + 6, 83, 4, 3, '#9a98a8'); R(g, px + 13, 80, 4, 4, '#ffd34e'); R(g, px + 14, 82, 2, 1, '#8a6a2a'); }
+      R(g, x - 10, 90, 80, 3, '#c8965a'); R(g, x - 10, 90, 80, 1, '#e0b070'); R(g, x - 8, 93, 76, 12, '#8a5a3a'); R(g, x + 42, 95, 22, 8, '#74482e'); R(g, x + 50, 98, 6, 1, '#e0b070'); R(g, x - 8, 93, 76, 1, '#6e4630');
+      if (who === 'bilge') { R(g, x + 56, 84, 6, 6, '#fff6ee'); R(g, x + 62, 86, 2, 3, '#fff6ee'); R(g, x + 56, 84, 6, 1, '#7a4a30'); g.globalAlpha = 0.6; for (j = 0; j < 2; j++) R(g, x + 57 + j * 3 + Math.round(Math.sin(t * 3 + j)), 80 - ((t * 5 + j * 3) % 6), 1, 2, '#fff6ee'); g.globalAlpha = 1; R(g, x - 4, 87, 5, 3, '#ff8fb8'); }
+      else { R(g, x + 56, 86, 11, 4, '#f6f3ee'); R(g, x + 57, 83, 10, 3, '#e8e4dc'); R(g, x + 56, 85, 11, 1, '#c4bcb0'); R(g, x - 4, 85, 7, 5, '#3b7fd6'); R(g, x - 3, 83, 5, 3, '#5a9af0'); }
+      if (!lk) bubble(px + 3, py - 17 - (Math.floor(t * 2 + (who === 'lele' ? 1 : 0)) % 2));
     }
-    mountain(-34, 40, 90, 54, '#2b1a2e', '#a8336f', null); mountain(226, 34, 90, 60, '#2b1a2e', '#a8336f', null);
-    mountain(96, 24, 90, 64, '#2b1a2e', '#a8336f', null);
-    cloud(drift(t, 20, 3), 52, 1, '#e8cdea', '#a77bcf');
-    cloud(drift(t, 120, 2), 40, 0.9, '#e8cdea', '#a77bcf');
-    cloud(drift(t, 240, 2.5), -20, 1.1, '#e8cdea', '#a77bcf'); cloud(drift(t, 60, 1.5), -38, 1.3, '#e8cdea', '#a77bcf');
-    ground(90, '#3a2243', '#6b2a4f');
-    trees(PAL.night); fireflies(t, 26);
-    var br = Math.floor(t * 1.6);
-    actor('bilge', 70, HY + (br % 2), m.bilge, {});
-    actor('lele', 106, HY + ((br + 1) % 2), m.lele, { lean: (Math.floor(t * 0.7) % 3) - 1 });
-    if (!s.bilge) bubble(75, HY - 16 - (Math.floor(t * 2) % 2));
-    if (!s.lele) bubble(111, HY - 16 - (Math.floor(t * 2 + 1) % 2));
+    desk(14, 'bilge', 34);
+    desk(124, 'lele', 144);
   }
 
   function drawRain(t, s, m, storm) {
@@ -834,16 +876,36 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
       if (rnd(x * 0.37 + y * 1.13 + 3) < 0.45) R(g, x, y, 2, 2, GR[Math.floor(rnd(x * 1.7 + y * 0.9 + 9) * GR.length)]);
     }
     for (k = 0; k < 170; k++) {
-      x = ((Math.pow(rnd(k + 1), 1.5) * W - t * 14) % W + W) % W - DX; top = hillTop(x); y = top + 3 + rnd(k + 2) * (108 - top - 6);
+      x = Math.pow(rnd(k + 1), 1.5) * W - DX; top = hillTop(x); y = top + 3 + rnd(k + 2) * (108 - top - 6);
       poppy(x, y, y > 92);
     }
-    var by = HY + 14;
-    var wph = t * 1.3, wv = (t % 3.2) < 1.6;
-    actor('bilge', 70, HY + (Math.sin(wph * 6.283) > 0 ? -1 : 0), m.bilge, { legs: 'walk', ph: wph, L: [-1, 9], R: [4, -3] });
-    actor('lele', 106, HY + (Math.sin((wph + 0.5) * 6.283) > 0 ? -1 : 0), m.lele, { legs: 'walk', ph: wph + 0.5, L: wv ? [-5 + Math.round(Math.sin(t * 9) * 2), -12] : [-1, 9], R: [1, 9] });
-    R(g, 87, by - 14, 1, 15, '#c8a070');
-    umbrella(87, by - 22, 14, 7, '#3b7fd6', '#5a9af0', '#2a5ab0');
-    for (k = 0; k < 16; k++) poppy(((rnd(k + 70) * W - t * 26) % W + W) % W - DX, 100 + rnd(k + 80) * 6, true);
+    var PY = HY + 6, BX = 92;
+    // ombrelle plantée dans l'herbe
+    R(g, BX, 56, 1, 38, '#c8a070'); umbrella(BX, 49, 30, 9, '#3b7fd6', '#5a9af0', '#2a5ab0');
+    // nappe à carreaux
+    for (y = 86; y < 99; y++) { var hw = Math.round(34 + (y - 86) * 1.1); for (x = BX - hw; x <= BX + hw; x += 4) R(g, x, y, Math.min(4, BX + hw - x + 1), 1, (((x - BX + 200) >> 2) + (y >> 1)) % 2 ? '#fff6ee' : '#d6453d'); }
+    R(g, BX - 36, 98, 74, 1, '#a82f2a');
+    // repas : panier, baguette, fruits, bouteille, verres
+    R(g, BX - 6, 88, 14, 9, '#b07a48'); R(g, BX - 6, 88, 14, 2, '#d09a60'); for (i = 0; i < 4; i++) R(g, BX - 6 + i * 4, 91, 1, 6, '#8a5a3a'); R(g, BX - 4, 83, 10, 1, '#8a5a3a'); R(g, BX - 4, 83, 1, 6, '#8a5a3a'); R(g, BX + 5, 83, 1, 6, '#8a5a3a');
+    R(g, BX - 3, 85, 9, 3, '#f3d38a'); R(g, BX - 1, 84, 2, 1, '#c8a050');
+    R(g, BX + 14, 90, 3, 3, '#e8584a'); R(g, BX + 18, 91, 3, 3, '#9be07a'); R(g, BX + 15, 94, 3, 3, '#ffd34e');
+    R(g, BX - 20, 86, 3, 10, '#2f6f4a'); R(g, BX - 19, 84, 1, 3, '#2f6f4a'); R(g, BX - 16, 93, 3, 4, '#fff6ee');
+    [['bilge', 62, 0], ['lele', 112, 1.6]].forEach(function (c) {
+      var who = c[0], px = c[1], k2 = colors(who), oc = topColor(who); if (oc) k2.top = oc;
+      var u = ((t * 0.22 + c[2] / 4) % 1), eat = u < 0.28 ? Math.sin(u / 0.28 * Math.PI) : 0, drink = (u > 0.5 && u < 0.72) ? Math.sin((u - 0.5) / 0.22 * Math.PI) : 0;
+      var side = who === 'bilge' ? 'R' : 'L', sd = who === 'bilge' ? 1 : -1, pose = { legs: 'hide', bob: Math.floor(t * 1.5 + c[2]) % 2 ? 0 : 0, lean: Math.round(Math.sin(t * 1.3 + c[2]) * 1) };
+      var o = who === 'bilge' ? 'L' : 'R';
+      pose[side] = [-sd * (2 + 4 * eat), 8 - 11 * eat - 6 * drink]; pose[o] = [sd * -1, 9];
+      var h = actor(who, px, PY, m[who], pose);
+      // jambes croisées
+      R(g, px + 1, PY + 23, 14, 4, k2.pants); R(g, px + 1, PY + 23, 14, 1, '#5a6aa8'); R(g, px, PY + 27, 5, 2, '#1d1120'); R(g, px + 11, PY + 27, 5, 2, '#1d1120');
+      accessories(g, who, px, PY);
+      var hp = h[side];
+      if (eat > 0.1) { R(g, hp[0] - 1, hp[1] - 1, 4, 3, '#e8584a'); R(g, hp[0] + 1, hp[1] - 2, 1, 1, '#2f6f4a'); }
+      else if (drink > 0.1) { R(g, hp[0] - 1, hp[1] - 4, 4, 5, '#fff6ee'); R(g, hp[0] - 1, hp[1] - 4, 4, 2, '#e8c040'); }
+      else if (u > 0.78) { R(g, hp[0] - 1, hp[1] - 1, 4, 3, '#f3d38a'); }
+    });
+    for (k = 0; k < 16; k++) poppy(rnd(k + 70) * W - DX, 100 + rnd(k + 80) * 6, true);
     butterflies(t, 5); flock(t, 3, -8, '#3a4a7a', 40);
   }
 
@@ -891,9 +953,31 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
     var PP = { t: '#3a2420', p: '#2f5a3a', h: '#4f7a4a' };
     pine(200, 93, 30, PP); pine(222, 93, 40, PP); pine(240, 94, 26, PP);
     flock(t, 3, -6, '#2a1a40', 12);
-    var sw = t * 0.9;
-    actor('bilge', 44, 69, m.bilge, { legs: 'dangle', ph: sw, lean: 2 });
-    actor('lele', 62, 69, m.lele, { legs: 'dangle', ph: sw + 0.5, lean: -1, L: [-9, 0] });
+    var sw = t * 0.9, FX = 74, FY = 91, fl = Math.sin(t * 11) + Math.sin(t * 17 + 1);
+    // lueur du feu
+    g.globalAlpha = 0.16 + 0.03 * fl; disc(g, FX + 5, FY - 6, 36, '#ff9a3c'); g.globalAlpha = 0.14; disc(g, FX + 5, FY - 6, 22, '#ffd34e'); g.globalAlpha = 1;
+    // bûches et pierres
+    R(g, FX - 2, FY - 2, 14, 3, '#4a2f1a'); R(g, FX - 3, FY - 1, 5, 2, '#6a4a2a'); R(g, FX + 8, FY - 1, 5, 2, '#6a4a2a');
+    for (i = 0; i < 6; i++) R(g, FX - 6 + i * 4, FY, 3, 2, i % 2 ? '#8a8294' : '#6a6478');
+    // flammes
+    [[0, 11, '#e8584a'], [2, 8, '#ff9a3c'], [4, 6, '#ffd34e']].forEach(function (q, n) {
+      for (var yy = 0; yy < q[1]; yy++) { var w = Math.max(1, Math.round((q[1] - yy) * 0.55 + (n === 0 ? 3 : 1.5) - 1)), sway = Math.round(Math.sin(t * 9 + yy * 0.6 + n) * (yy / q[1]) * 2); R(g, FX + 5 - Math.floor(w / 2) + sway, FY - 3 - yy, w, 1, q[2]); }
+    });
+    for (i = 0; i < 6; i++) { var spk = (t * 12 + i * 5) % 26; g.globalAlpha = 1 - spk / 26; R(g, FX + 5 + Math.sin(t * 3 + i * 2) * (4 + spk * 0.2), FY - 8 - spk, 1, 1, i % 2 ? '#ffd34e' : '#ff9a3c'); }
+    g.globalAlpha = 0.25; for (i = 0; i < 4; i++) R(g, FX + 4 + Math.sin(t * 2 + i) * (2 + i), FY - 18 - i * 5, 3, 3, '#cfc4d8'); g.globalAlpha = 1;
+    // Bilge écoute en se balançant, puis applaudit
+    var clap = (t % 7) > 5.6 && Math.floor(t * 6) % 2;
+    actor('bilge', 44, 69, m.bilge, { legs: 'dangle', ph: sw, lean: Math.round(Math.sin(t * 1.6) * 1.5) + 1, L: clap ? [5, -4] : [-1, 9], R: clap ? [-4, -4] : [1, 9] });
+    // Lélé gratte sa guitare
+    var LX = 90, LY = 69, kk = colors('lele'), oc2 = topColor('lele'); if (oc2) kk.top = oc2;
+    actor('lele', LX, LY, m.lele, { legs: 'dangle', ph: sw + 0.5, lean: -1 + (Math.floor(t * 2) % 2), L: 'none', R: 'none' });
+    var gx = LX + 3, gy = LY + 17;
+    R(g, gx + 2, gy, 9, 6, '#c8752a'); R(g, gx + 1, gy + 3, 11, 6, '#c8752a'); R(g, gx + 2, gy + 1, 4, 1, '#e9a43b'); R(g, gx + 5, gy + 4, 3, 3, '#2a1a10'); R(g, gx + 3, gy + 8, 7, 1, '#8a4a1a');
+    line(gx + 1, gy + 2, gx - 9, gy - 6, '#6e4630'); line(gx + 1, gy + 3, gx - 9, gy - 5, '#6e4630'); R(g, gx - 11, gy - 8, 3, 3, '#3a2a1a');
+    var stroke = Math.round(Math.sin(t * 9) * 2);
+    armTo(LX, LY, 'L', [-8, -2], kk); armTo(LX, LY, 'R', [-4, 6 + stroke], kk);
+    for (i = 0; i < 4; i++) { var nt = (t * 10 + i * 9) % 34; g.globalAlpha = 1 - nt / 34; var nx = gx - 6 + i * 8 + Math.sin(t * 2 + i) * 3, ny = gy - 10 - nt; R(g, nx, ny, 3, 2, ['#fff4fb', '#ffd34e', '#ff8fb8', '#9be0ff'][i]); R(g, nx + 2, ny - 4, 1, 4, ['#fff4fb', '#ffd34e', '#ff8fb8', '#9be0ff'][i]); }
+    g.globalAlpha = 1;
     var sp = (t % 7) / 0.9;
     if (sp < 1) for (i = 0; i < 8; i++) { g.globalAlpha = 1 - i / 8; R(g, 230 - sp * 150 + i * 4, -52 + sp * 62 - i * 1.6, 2, 1, '#fff6c0'); }
     g.globalAlpha = 1;
@@ -1019,7 +1103,7 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
     var k = kind(), title, cap, level = 0;
     if (k === 'wait') {
       title = "Qui s'est levé du bon pied ?";
-      if (!state.bilge && !state.lele) cap = 'Bilge et Lélé, choisissez chacun votre humeur du matin.';
+      if (!state.bilge && !state.lele) cap = 'Bilge et Lélé, choisissez chacun votre humeur du matin, puis validez.';
       else cap = state.bilge ? "Au tour de Lélé." : "Au tour de Bilge.";
     } else if (k === 'comfort') {
       var sadW = state.bilge < state.lele ? 'bilge' : 'lele', hapW = sadW === 'bilge' ? 'lele' : 'bilge';
@@ -1073,7 +1157,7 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
   function sync() {
     ['bilge', 'lele'].forEach(function (who) {
       var lk = isLocked(cur, who), dv = draft[cur + who] || 0;
-      buttons[who].forEach(function (b, i) { b.setAttribute('aria-pressed', state[who] === i + 1 ? 'true' : 'false'); });
+      buttons[who].forEach(function (b, i) { b.setAttribute('aria-pressed', (lk ? state[who] : dv) === i + 1 ? 'true' : 'false'); });
       boxes[who].classList.toggle('locked', lk);
       vbtn[who].disabled = lk || !dv;
       ubtn[who].hidden = !(lk && cur === todayKey);
@@ -1102,11 +1186,11 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
   }
   function isLocked(day, who) { var e = days[day]; return !!(e && e[WHO[who]] > 0); }
   function stateFor(day) {
-    ['bilge', 'lele'].forEach(function (w) { state[w] = isLocked(day, w) ? days[day][WHO[w]] : (draft[day + w] || 0); });
+    ['bilge', 'lele'].forEach(function (w) { state[w] = isLocked(day, w) ? days[day][WHO[w]] : 0; });   // seul le choix validé fait changer la scène
   }
   function pick(who, v) {            // simple essai : rien n'est enregistré avant « Valider »
     if (isLocked(cur, who)) return;
-    draft[cur + who] = v; state[who] = v; sync();
+    draft[cur + who] = v; sync();
   }
   function validate(who) {
     var v = draft[cur + who];
