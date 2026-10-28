@@ -20,6 +20,17 @@ export default async (req) => {
   const store = getStore({ name: "humeurs5", consistency: "strong" });
 
   if (req.method === "GET") {
+    // Cagnotte : 1 pièce par personne et par jour où une humeur a été donnée.
+    if (new URL(req.url).searchParams.get("coins")) {
+      const { blobs } = await store.list();
+      const out = { bilge: 0, lele: 0, keys: {} };
+      for (const { key } of blobs) {
+        const [day, who] = key.split("/");
+        if (!DAY.test(day) || !WHO.includes(who)) continue;
+        out[who]++; out.keys[key] = 1;
+      }
+      return json(out);
+    }
     const month = new URL(req.url).searchParams.get("month") || "";
     if (!MONTH.test(month)) return json({ error: "mois invalide" }, 400);
     const { blobs } = await store.list({ prefix: month });

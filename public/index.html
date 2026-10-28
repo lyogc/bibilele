@@ -80,6 +80,12 @@ button.mood canvas { width: 100%; max-width: 60px; height: auto; aspect-ratio: 1
 button.mood:hover { transform: translateY(-2px); border-color: var(--magenta); }
 button.mood[aria-pressed="true"] { border-color: var(--lav); background: var(--wine); color: #fff4fb; }
 button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
+.purse { display: flex; align-items: center; gap: 14px; background: var(--card); border: 3px solid var(--wine); padding: 12px 16px; }
+.purse .coin { flex: none; width: 32px; height: 32px; background: #ffd34e; border: 3px solid #b7791f; box-shadow: inset -4px -4px 0 #e9a43b, inset 3px 3px 0 #fff0a0; border-radius: 50%; }
+.purse .coin.pop { animation: coinpop .6s steps(6); }
+@keyframes coinpop { 0% { transform: translateY(0) scaleX(1); } 40% { transform: translateY(-10px) scaleX(.2); } 80% { transform: translateY(-4px) scaleX(1); } 100% { transform: none; } }
+.purse-text b { font-family: var(--font-display); font-size: 26px; color: #ffd34e; }
+.purse-text small { display: block; color: var(--lav); }
 .stats { background: var(--card); border: 3px solid var(--wine); padding: 16px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .stats-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
 .stats h2 { margin: 0; font-family: var(--font-display); font-weight: 500; font-size: 24px; color: #fff4fb; }
@@ -136,6 +142,12 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
   </section>
 
   <section class="pickers" id="pickers"></section>
+
+  <section class="purse" aria-label="Cagnotte">
+    <div class="coin" aria-hidden="true"></div>
+    <div class="purse-text"><b id="coinTotal">0</b> <span id="coinLbl">pièce dans la cagnotte</span>
+      <small id="coinWho"></small></div>
+  </section>
 
   <section class="stats" aria-label="Statistiques">
     <div class="stats-head">
@@ -939,7 +951,7 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
     lastWrite[cur + who] = Date.now();
     outbox = outbox.filter(function (o) { return !(o.day === cur && o.who === who); });
     outbox.push({ day: cur, who: who, value: v });
-    persist(); sync(); flush();
+    persist(); sync(); renderCoins(); flush();
   }
   function flush() {
     if (flushing || !outbox.length) return Promise.resolve();
@@ -950,7 +962,7 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
         if (!r.ok) throw new Error('http ' + r.status);
         net = 'ok';
         outbox = outbox.filter(function (x) { return !(x.day === o.day && x.who === o.who && x.value === o.value); });
-        persist(); flushing = false; renderStats();
+        persist(); flushing = false; renderStats(); fetchCoins();
         return flush();
       })
       .catch(function () { net = 'off'; flushing = false; renderStats(); });
@@ -969,6 +981,26 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
     var e = days[cur] || [0, 0];
     state.bilge = e[0]; state.lele = e[1];
     if (JSON.stringify(days) !== before) { persist(); sync(); }
+    renderCoins();
+  }
+  var coinSrv = null, coinShown = -1;
+  function renderCoins() {
+    var c = { bilge: 0, lele: 0 };
+    if (coinSrv) { c = { bilge: coinSrv.bilge, lele: coinSrv.lele }; }
+    if (!coinSrv) Object.keys(days).forEach(function (k) { var e = days[k]; if (e[0]) c.bilge++; if (e[1]) c.lele++; });
+    if (coinSrv) outbox.forEach(function (o) { if (!coinSrv.keys[o.day + '/' + o.who]) c[o.who]++; });
+    var tot = c.bilge + c.lele;
+    document.getElementById('coinTotal').textContent = tot;
+    document.getElementById('coinLbl').textContent = (tot > 1 ? 'pièces' : 'pièce') + ' dans la cagnotte';
+    document.getElementById('coinWho').textContent = 'Bibi ' + c.bilge + ' · Lélé ' + c.lele + ' — 1 pièce chacun par jour où l\u2019on répond';
+    if (coinShown >= 0 && tot > coinShown) { var el = document.querySelector('.purse .coin'); el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); }
+    coinShown = tot;
+  }
+  function fetchCoins() {
+    return fetch(API + '?coins=1', { cache: 'no-store' })
+      .then(function (r) { if (!r.ok) throw new Error('http'); return r.json(); })
+      .then(function (d) { coinSrv = { bilge: d.bilge || 0, lele: d.lele || 0, keys: d.keys || {} }; renderCoins(); })
+      .catch(function () {});
   }
   function fetchMonth(y, m) {
     return fetch(API + '?month=' + y + '-' + pad(m + 1), { cache: 'no-store' })
@@ -979,7 +1011,7 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
   function poll() {
     if (document.hidden || !vm) return;
     flush().then(function () {
-      fetchMonth(vm.y, vm.m);
+      fetchMonth(vm.y, vm.m); fetchCoins();
       var c = parseKey(cur);
       if (c.getFullYear() !== vm.y || c.getMonth() !== vm.m) fetchMonth(c.getFullYear(), c.getMonth());
     });
@@ -1076,7 +1108,7 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
     el('facts').innerHTML = f.map(function (t) { return '<li>' + t + '</li>'; }).join('');
   }
 
-  setDay(todayKey);
+  setDay(todayKey); renderCoins(); fetchCoins();
   if (!reduce) {
     (function frame() {
       var f = Math.floor(now() * 10);
