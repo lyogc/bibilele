@@ -693,7 +693,7 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
       head(cv.getContext('2d'), who, MOODNAMES[v - 1], 0, 0, true);
       var sp = document.createElement('span'); sp.textContent = LABELS[v - 1];
       b.appendChild(cv); b.appendChild(sp);
-      b.addEventListener('click', function () { state[who] = v; save(); sync(); });
+      b.addEventListener('click', function () { pick(who, v); });
       row.appendChild(b); buttons[who].push(b);
     })(v);
     pickers.appendChild(box);
@@ -716,12 +716,67 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
   function ymd(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
   function parseKey(k) { var q = k.split('-'); return new Date(+q[0], +q[1] - 1, +q[2]); }
   var todayKey = ymd(new Date());
-  try { var raw = localStorage.getItem(KEY); if (raw) days = JSON.parse(raw) || {}; } catch (e) { days = {}; }
-  function persist() { try { localStorage.setItem(KEY, JSON.stringify(days)); } catch (e) {} }
-  function save() {
-    if (state.bilge || state.lele) days[cur] = [state.bilge, state.lele]; else delete days[cur];
-    persist();
+  /* ---------- carnet partagé (fonction Netlify /api/days) ---------- */
+  var CACHE = 'barometre-bonheur-cache-v2', OUTBOX = 'barometre-bonheur-outbox-v1', API = '/api/days';
+  var WHO = { bilge: 0, lele: 1 }, outbox = [], lastWrite = {}, net = 'unknown', flushing = false;
+  try { var raw = localStorage.getItem(CACHE); if (raw) days = JSON.parse(raw) || {}; } catch (e) { days = {}; }
+  try { var rawO = localStorage.getItem(OUTBOX); if (rawO) outbox = JSON.parse(rawO) || []; } catch (e) { outbox = []; }
+  function persist() {
+    try { localStorage.setItem(CACHE, JSON.stringify(days)); localStorage.setItem(OUTBOX, JSON.stringify(outbox)); } catch (e) {}
   }
+  function pick(who, v) {
+    state[who] = v;
+    var e = (days[cur] || [0, 0]).slice(); e[WHO[who]] = v; days[cur] = e;
+    lastWrite[cur + who] = Date.now();
+    outbox = outbox.filter(function (o) { return !(o.day === cur && o.who === who); });
+    outbox.push({ day: cur, who: who, value: v });
+    persist(); sync(); flush();
+  }
+  function flush() {
+    if (flushing || !outbox.length) return Promise.resolve();
+    flushing = true;
+    var o = outbox[0];
+    return fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(o) })
+      .then(function (r) {
+        if (!r.ok) throw new Error('http ' + r.status);
+        net = 'ok';
+        outbox = outbox.filter(function (x) { return !(x.day === o.day && x.who === o.who && x.value === o.value); });
+        persist(); flushing = false; renderStats();
+        return flush();
+      })
+      .catch(function () { net = 'off'; flushing = false; renderStats(); });
+  }
+  function pending(day, who) {
+    if (Date.now() - (lastWrite[day + who] || 0) < 6000) return true;
+    return outbox.some(function (o) { return o.day === day && o.who === who; });
+  }
+  function mergeServer(obj) {
+    var before = JSON.stringify(days);
+    Object.keys(obj).forEach(function (k) {
+      var srv = obj[k], loc = (days[k] || [0, 0]).slice();
+      ['bilge', 'lele'].forEach(function (w) { var i = WHO[w]; if (srv[i] && !pending(k, w)) loc[i] = srv[i]; });
+      days[k] = loc;
+    });
+    var e = days[cur] || [0, 0];
+    state.bilge = e[0]; state.lele = e[1];
+    if (JSON.stringify(days) !== before) { persist(); sync(); }
+  }
+  function fetchMonth(y, m) {
+    return fetch(API + '?month=' + y + '-' + pad(m + 1), { cache: 'no-store' })
+      .then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
+      .then(function (data) { var was = net; net = 'ok'; mergeServer(data.days || {}); if (was !== 'ok') renderStats(); })
+      .catch(function () { if (net !== 'off') { net = 'off'; renderStats(); } });
+  }
+  function poll() {
+    if (document.hidden || !vm) return;
+    flush().then(function () {
+      fetchMonth(vm.y, vm.m);
+      var c = parseKey(cur);
+      if (c.getFullYear() !== vm.y || c.getMonth() !== vm.m) fetchMonth(c.getFullYear(), c.getMonth());
+    });
+  }
+  setInterval(poll, 5000);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) poll(); });
   function fmt(d, o) { try { return d.toLocaleDateString('fr-CH', o); } catch (e) { return ymd(d); } }
   var elInput = document.getElementById('dayinput'), elNext = document.getElementById('dnext'), elToday = document.getElementById('dtoday');
   elInput.max = todayKey;
@@ -736,7 +791,7 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
     cur = k; var e = days[k];
     state.bilge = e ? e[0] : 0; state.lele = e ? e[1] : 0;
     var d = parseKey(k); vm = { y: d.getFullYear(), m: d.getMonth() };
-    dayUI(); sync();
+    dayUI(); sync(); poll();
   }
   function shiftDay(n) { var d = parseKey(cur); d.setDate(d.getDate() + n); setDay(ymd(d)); }
   document.getElementById('dprev').addEventListener('click', function () { shiftDay(-1); });
@@ -746,34 +801,25 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
   var nowD = new Date(), maxVm = nowD.getFullYear() * 12 + nowD.getMonth();
   function shiftMonth(n) {
     var idx = vm.y * 12 + vm.m + n; if (idx > maxVm) return;
-    vm = { y: Math.floor(idx / 12), m: idx % 12 }; renderStats();
+    vm = { y: Math.floor(idx / 12), m: idx % 12 }; renderStats(); poll();
   }
   document.getElementById('mprev').addEventListener('click', function () { shiftMonth(-1); });
   document.getElementById('mnext').addEventListener('click', function () { shiftMonth(1); });
 
   /* ---------- statistiques ---------- */
-  function hasReal() { for (var k in days) if (days[k][0] && days[k][1]) return true; return false; }
-  function sampleMonth(y, m) {
-    var out = {}, dim = new Date(y, m + 1, 0).getDate(), last = (y === nowD.getFullYear() && m === nowD.getMonth()) ? nowD.getDate() : dim;
-    for (var d = 1; d <= last; d++) {
-      if (rnd(d * 5 + m * 17 + 3) > 0.86) continue;
-      var vb = Math.max(1, Math.min(4, Math.round(2.7 + Math.sin(d * 0.6 + m) * 1.1 + (rnd(d + m * 31) - 0.5) * 1.4)));
-      var vl = Math.max(1, Math.min(4, Math.round(2.6 + Math.sin(d * 0.6 + m + 1.2) * 1.1 + (rnd(d * 2 + m * 13) - 0.5) * 1.4)));
-      out[y + '-' + pad(m + 1) + '-' + pad(d)] = [vb, vl];
-    }
-    return out;
-  }
   function el(id) { return document.getElementById(id); }
   function renderStats() {
     if (!vm) return;
-    var y = vm.y, m = vm.m, dim = new Date(y, m + 1, 0).getDate(), real = hasReal();
+    var y = vm.y, m = vm.m, dim = new Date(y, m + 1, 0).getDate();
     var src = days, list = [], d, e, k;
     for (d = 1; d <= dim; d++) { k = y + '-' + pad(m + 1) + '-' + pad(d); e = src[k]; list.push(e && e[0] && e[1] ? { d: d, b: e[0], l: e[1], kind: kindFor(e[0], e[1]) } : null); }
     var rows = list.filter(Boolean), n = rows.length;
     el('monthlabel').textContent = fmt(new Date(y, m, 1), { month: 'long', year: 'numeric' });
     el('mnext').disabled = (y * 12 + m) >= maxVm;
     var note = el('statnote');
-    { note.className = 'note'; note.textContent = "Les réponses sont gardées sur cet appareil. Le partage entre vos deux appareils viendra avec le serveur commun."; }
+    note.className = 'note';
+    note.textContent = net === 'ok' ? (outbox.length ? 'Envoi en cours…' : 'Synchronisé : vous voyez les réponses de vos deux appareils.')
+      : (net === 'off' ? "Hors connexion : vos réponses sont gardées sur cet appareil et seront envoyées dès que possible." : 'Connexion au carnet partagé…');
 
     var sb = 0, sl = 0, i;
     for (i = 0; i < n; i++) { sb += rows[i].b; sl += rows[i].l; }
