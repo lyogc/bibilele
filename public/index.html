@@ -695,7 +695,8 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
   function drawComfort(t, s, m) {
     var sadIsBilge = s.bilge < s.lele;
     var sadWho = sadIsBilge ? 'bilge' : 'lele', happyWho = sadIsBilge ? 'lele' : 'bilge';
-    var sadX = sadIsBilge ? 70 : 94, happyX = sadIsBilge ? 94 : 70;
+    var sadX = sadIsBilge ? 70 : 94, happyX = sadIsBilge ? 88 : 70;
+    var UMB = sadIsBilge, UCX = 101, UA = 32, UTOP = 47;   // Bilge triste : Lélé la serre dans ses bras et tient un parapluie au-dessus d'eux
     var cx = sadX + 8, sunX = cx < 96 ? 160 : 32;
     sky([['#f06ea0', 0, 18], ['#f58db4', 18, 34], ['#f9a9c4', 34, 50], ['#fcc6c8', 50, 66], ['#ffe0b8', 66, 90]]);
     sunDisc(sunX, 26, t);
@@ -711,16 +712,20 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
     flock(t, 5, -10, '#5a1f4e', sunX < 96 ? 90 : 10);
     butterflies(t, 4);
     cloud(cx - 15, 28, 1.1, '#5a4268', '#463354');
-    rain(t, 26, cx - 16, cx + 16, 50, 94, null);
+    if (UMB) rain(t, 40, 52, 146, 44, 94, function (x, y) { return x >= UCX - UA && x <= UCX + UA && y >= UTOP; });
+    else rain(t, 26, cx - 16, cx + 16, 50, 94, null);
     var sadMood = MOODNAMES[(sadIsBilge ? s.bilge : s.lele) - 1], happyMood = MOODNAMES[(sadIsBilge ? s.lele : s.bilge) - 1];
     var dir = happyX < sadX ? 1 : -1, pat = Math.round(Math.sin(t * 5) * 1.5), wipe = (t % 5) < 1.4, farS = dir === 1 ? 'R' : 'L';
     var wx = (farS === 'R' ? -3 : 3) + Math.round(Math.sin(t * 9)), sadPose = { bob: Math.floor(t * 3) % 2 };
     sadPose[farS] = wipe ? [wx, -7] : [farS === 'R' ? 1 : -1, 9];
+    if (UMB) sadPose.lean = 1;
     actor(sadWho, sadX, HY + 1, sadMood, sadPose);
     var near = dir === 1 ? 'R' : 'L', tx = dir === 1 ? sadX + 2 : sadX + 13, sx0 = dir === 1 ? happyX + 13 : happyX + 2;
     var happyPose = { bob: Math.floor(t * 3) % 2 ? -1 : 0, lean: dir * 2 };
     happyPose[near] = [tx - sx0, -1 + pat];
+    if (UMB) happyPose.R = [2, -9];
     actor(happyWho, happyX, HY, happyMood, happyPose);
+    if (UMB) { R(g, UCX, UTOP + 8, 1, 17, '#d8c8e8'); umbrella(UCX, UTOP, UA, 10, '#3b7fd6', '#5a9af0', '#2a5ab0'); R(g, UCX - 1, 72, 3, 3, '#d9a47e'); }
     var hx = happyX + 5;
     g.globalAlpha = 0.9;
     heart(hx - 6, HY - 8 - ((t * 9) % 18), '#ff5d8f');
