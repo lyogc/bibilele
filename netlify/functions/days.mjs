@@ -18,7 +18,7 @@ const json = (body, status = 200) =>
   });
 
 export default async (req) => {
-  const store = getStore({ name: "humeurs5", consistency: "strong" });
+  const store = getStore({ name: "humeurs-v1", consistency: "strong" });
 
   if (req.method === "GET") {
     // Cagnotte : 1 pièce par personne et par jour où une humeur a été donnée.
@@ -77,7 +77,7 @@ export default async (req) => {
     if (!DAY.test(day || "") || !WHO.includes(who)) return json({ error: "données invalides" }, 400);
     const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Zurich" });
     if (day !== today) return json({ error: "Seule la réponse du jour peut être modifiée" }, 403);
-    const shop = getStore({ name: "boutique", consistency: "strong" });
+    const shop = getStore({ name: "boutique-v1", consistency: "strong" });
     const { blobs } = await store.list();
     const answered = blobs.filter(({ key }) => key.endsWith("/" + who)).length;
     let spent = 0, received = 0;

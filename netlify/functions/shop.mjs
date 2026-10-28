@@ -34,8 +34,8 @@ const json = (body, status = 200) =>
   });
 
 async function load() {
-  const moods = getStore({ name: "humeurs5", consistency: "strong" });
-  const shop = getStore({ name: "boutique", consistency: "strong" });
+  const moods = getStore({ name: "humeurs-v1", consistency: "strong" });
+  const shop = getStore({ name: "boutique-v1", consistency: "strong" });
 
   const days = { bilge: 0, lele: 0 };
   const { blobs: mb } = await moods.list();
