@@ -857,56 +857,56 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
   }
 
   function drawComfort(t, s, m) {
-    var sadIsBilge = s.bilge < s.lele, SPLIT = 88;
+    // celui qui va mal court en pleurant vers le soleil ; l'autre le suit en courant avec le parapluie. Le décor défile derrière eux.
+    var sadIsBilge = s.bilge < s.lele, SPLIT = 108, SP = 46;
     var sadWho = sadIsBilge ? 'bilge' : 'lele', happyWho = sadIsBilge ? 'lele' : 'bilge';
-    var sadX = sadIsBilge ? 78 : 88, happyX = sadIsBilge ? 87 : 80, sunX = sadIsBilge ? 160 : 32;
-    var UMB = sadIsBilge, UCX = 101, UA = 32, UTOP = 47;   // Bilge triste : Lélé la serre dans ses bras et tient un parapluie au-dessus d'eux
+    var sadX = 76, happyX = 52, sunX = 165, UCX = 72, UA = 30, UTOP = 46;
     sky([['#f06ea0', 0, 18], ['#f58db4', 18, 34], ['#f9a9c4', 34, 50], ['#fcc6c8', 50, 66], ['#ffe0b8', 66, 90]]);
     sunDisc(sunX, 26, t);
-    mountain(-34, 40, 90, 54, '#a04a8c', '#d878b0', null); mountain(226, 36, 90, 56, '#a04a8c', '#d878b0', null);
-    mountain(sunX < 96 ? 150 : 44, 44, 90, 44, '#8c3c7a', '#c45a98', '#fbe9f5');
-    hiker(sunX < 96 ? 150 : 44, 44, 90, 44, t, 0.4, -1);
-    cloud(drift(t, 20, 4), 8, 1.1, '#fff4fb', '#f3c6e4');
-    cloud(drift(t, 130, 3), 40, 0.9, '#fff4fb', '#f3c6e4');
-    cloud(drift(t, 200, 4), -22, 1.3, '#fff4fb', '#f3c6e4'); cloud(drift(t, 70, 3), -40, 1.1, '#fff4fb', '#f3c6e4');
+    var P = 340, mo = -((t * 7) % P);
+    [[-34, 40, 54, '#a04a8c', '#d878b0', null], [226, 36, 56, '#a04a8c', '#d878b0', null], [44, 44, 44, '#8c3c7a', '#c45a98', '#fbe9f5']].forEach(function (q, i) {
+      for (var r = 0; r < 2; r++) { g.save(); g.translate(Math.round(mo + r * P), 0); mountain(q[0], q[1], 90, q[2], q[3], q[4], q[5]); g.restore(); }
+    });
+    cloud(drift(t, 20, -8), 8, 1.1, '#fff4fb', '#f3c6e4');
+    cloud(drift(t, 130, -7), 40, 0.9, '#fff4fb', '#f3c6e4');
+    cloud(drift(t, 200, -9), -22, 1.3, '#fff4fb', '#f3c6e4'); cloud(drift(t, 70, -8), -40, 1.1, '#fff4fb', '#f3c6e4');
     ground(90, '#7bc77a', '#a6e08c');
     R(g, -DX, 100, W, 8, '#5aa862');
-    trees(PAL.sun);
-    flock(t, 5, -10, '#5a1f4e', sunX < 96 ? 90 : 10);
+    trees(PAL.sun, -t * 22);
+    // herbe et fleurs au premier plan qui filent vers l'arrière
+    for (var gi = 0; gi < 34; gi++) {
+      var gx = ((rnd(gi + 600) * 320 - t * SP * 1.3) % 320 + 320) % 320 - 90, gy = 93 + rnd(gi + 640) * 14;
+      R(g, Math.round(gx), Math.round(gy), 4, 1, '#4f9a5a'); R(g, Math.round(gx) + 1, Math.round(gy) - 1, 1, 1, '#a6e08c');
+      if (gi % 5 === 0) R(g, Math.round(gx) + 6, Math.round(gy), 2, 2, '#ffd34e');
+    }
+    flock(t, 5, -10, '#5a1f4e', 90);
     butterflies(t, 4);
-    // la moitié de l'écran où se trouve celui qui va mal : ciel sombre et pluie
-    g.save(); g.beginPath(); if (sadIsBilge) g.rect(-DX - 40, -DY - 10, SPLIT + DX + 40, 200); else g.rect(SPLIT, -DY - 10, 300, 200); g.clip();
+    // côté gauche : ciel sombre et pluie (la pluie file avec le décor)
+    g.save(); g.beginPath(); g.rect(-DX - 40, -DY - 10, SPLIT + DX + 40, 200); g.clip();
     g.globalAlpha = 0.58; R(g, -DX - 40, -DY - 10, 400, 200, '#241c3c'); g.globalAlpha = 1;
-    for (var ci = 0; ci < 9; ci++) cloud(drift(t, ci * 34, 4 + (ci % 3)), -44 + (ci % 5) * 12, 1.4, '#5a4268', '#463354');
-    rain(t, 150, -DX - 40, W - DX + 40, -DY, 94, UMB ? function (x, y) { return x >= UCX - UA && x <= UCX + UA && y >= UTOP; } : null);
+    for (var ci = 0; ci < 9; ci++) cloud(drift(t, ci * 34, -(10 + (ci % 3) * 2)), -44 + (ci % 5) * 12, 1.4, '#5a4268', '#463354');
+    rain(t, 150, -DX - 40, W - DX + 40, -DY, 94, function (x, y) { return x >= UCX - UA && x <= UCX + UA && y >= UTOP; });
+    for (var si = 0; si < 22; si++) {   // traînées de vent
+      var sx = ((rnd(si + 700) * 300 - t * 150 * (0.7 + rnd(si + 720))) % 300 + 300) % 300 - 100, sy = -20 + rnd(si + 740) * 100;
+      g.globalAlpha = 0.5; R(g, Math.round(sx), Math.round(sy), 7, 1, '#cfc4f5'); g.globalAlpha = 1;
+    }
     g.restore();
     g.globalAlpha = 0.55; R(g, SPLIT, -DY, 1, 162, '#fff4fb'); g.globalAlpha = 1;
     var sadMood = MOODNAMES[(sadIsBilge ? s.bilge : s.lele) - 1], happyMood = MOODNAMES[(sadIsBilge ? s.lele : s.bilge) - 1];
-    var kh = colors(happyWho), ks = colors(sadWho), oh = topColor(happyWho), os = topColor(sadWho); if (oh) kh.top = oh; if (os) ks.top = os;
-    var bob = Math.floor(t * 3) % 2, y0 = HY + 1, pat = Math.round(Math.sin(t * 5) * 1.5), wipe = (t % 5) < 1.6, wx = Math.round(Math.sin(t * 9));
-    if (sadIsBilge) {
-      // Lélé (heureux) serre Bilge de son bras gauche, tient le parapluie de l'autre
-      thick(happyX + 2, y0 + 17, sadX + 1, y0 + 20, kh.top); R(g, sadX, y0 + 19, 2, 2, kh.skin);                      // derrière le dos de Bilge
-      actor(sadWho, sadX, y0 + bob, sadMood, { legs: 'stand', L: wipe ? [3 + wx, -7] : [-1, 9], R: 'none', lean: -4 });
-      thick(sadX + 13, y0 + 17 + bob, happyX + 12, y0 + 20, ks.top); R(g, happyX + 11, y0 + 19, 2, 2, ks.skin);       // elle l'enlace aussi
-      actor(happyWho, happyX, y0 - bob, happyMood, { legs: 'stand', L: 'none', R: [2, -9], lean: 4 });
-      R(g, UCX, UTOP + 8, 1, 17, '#d8c8e8'); umbrella(UCX, UTOP, UA, 10, '#3b7fd6', '#5a9af0', '#2a5ab0'); R(g, UCX - 1, 72, 3, 3, '#d9a47e');
-    } else {
-      // Bilge (heureuse) enlace Lélé, qui s'essuie les yeux
-      thick(happyX + 13, y0 + 17, sadX + 16, y0 + 20, kh.top); R(g, sadX + 15, y0 + 19, 2, 2, kh.skin);              // dans le dos de Lélé
-      actor(happyWho, happyX, y0 - bob, happyMood, { legs: 'stand', L: 'none', R: 'none', lean: -4 });
-      actor(sadWho, sadX, y0 + bob, sadMood, { legs: 'stand', L: 'none', R: wipe ? [-3 - wx, -7] : [1, 9], lean: 3 });
-      thick(happyX + 13, y0 + 19 - bob, sadX + 5, y0 + 18, kh.top);
-    }
-    if (sadMood === 'sad' || sadMood === 'low') {
-      var hx0 = sadX + (sadIsBilge ? -4 : 3);
-      for (var e = 0; e < 2; e++) { var tf = (t * 14 + e * 9) % 18; g.globalAlpha = 1 - tf / 18; R(g, hx0 + 5 + e * 5, y0 + 10 + tf * 0.9, 1, 2, '#7cc4ff'); }
+    var run = t * 2.6, wx = Math.round(Math.sin(t * 9)), wipe = (t % 4) < 1.8;
+    var bs = Math.sin(run * 6.283) > 0 ? -1 : 0, bh = Math.sin((run + 0.5) * 6.283) > 0 ? -1 : 0, y0 = HY;
+    // celui qui est triste, en tête, s'essuie les yeux en courant
+    actor(sadWho, sadX, y0 + bs, sadMood, { legs: 'walk', ph: run, lean: 3, L: wipe ? [3 + wx, -7] : [-1, 9], R: 'none' });
+    // l'autre derrière, bras tendu avec le parapluie
+    actor(happyWho, happyX, y0 + bh, happyMood, { legs: 'walk', ph: run + 0.5, lean: 2, L: [-1, 9], R: [UCX - (happyX + 13), 0] });
+    R(g, UCX, UTOP + 12, 1, 28, '#d8c8e8'); umbrella(UCX, UTOP, UA, 11, '#3b7fd6', '#5a9af0', '#2a5ab0');
+    if (sadMood === 'sad' || sadMood === 'low') {   // larmes projetées vers l'arrière
+      for (var e = 0; e < 3; e++) { var tf = (t * 16 + e * 6) % 18; g.globalAlpha = 1 - tf / 18; R(g, Math.round(sadX + 5 - tf * 1.5 + (e % 2) * 4), Math.round(y0 + 10 + bs + tf * 0.5), 1, 2, '#7cc4ff'); }
       g.globalAlpha = 1;
     }
-    var hxh = happyX + 5;
     g.globalAlpha = 0.9;
-    heart(hxh - 6, HY - 8 - ((t * 9) % 18), '#ff5d8f');
-    heart(hxh + 6, HY - 20 - ((t * 9 + 9) % 18), '#ff9ab8');
+    heart(happyX + 2 - ((t * 9) % 18), HY - 8 - ((t * 9) % 18) * 0.5, '#ff5d8f');
+    heart(happyX + 8 - ((t * 9 + 9) % 18), HY - 14 - ((t * 9 + 9) % 18) * 0.5, '#ff9ab8');
     g.globalAlpha = 1;
   }
 
@@ -1662,7 +1662,8 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
       'Cagnotte : 20 pièces par jour de réponse et par personne.',
       'Boutique : animaux, habits et accessoires, cadeaux et envoi de pièces entre nous.',
       'Avatars agrandis d’environ 25 %.',
-      'Badges du mois et ce journal des mises à jour.'
+      'Badges du mois et ce journal des mises à jour.',
+      'Scène de câlin : celui qui est triste court en pleurant vers le soleil, l’autre le suit avec le parapluie, et le décor défile avec eux.'
     ] }
   ];
   (function () {
