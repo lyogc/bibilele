@@ -2,7 +2,7 @@ import { getStore } from "@netlify/blobs";
 
 // Carnet partagé du Baromètre du bonheur.
 // GET  /api/days?month=2026-10          -> { days: { "2026-10-28": [humeurBilge, humeurLele], ... } }
-// POST /api/days {day, who, value}      -> enregistre l'humeur (1 à 5) d'une personne pour un jour
+// POST /api/days {day, who, value}      -> enregistre l'humeur (1 à 5) d'une personne pour un jour (une seule fois : 409 si déjà validée)
 // Chaque réponse est une entrée séparée ("2026-10-28/bilge") : si Bilge et Lélé
 // répondent en même temps, aucune des deux réponses n'écrase l'autre.
 
@@ -59,7 +59,11 @@ export default async (req) => {
     const d = new Date(day + "T00:00:00Z");
     if (Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== day) return json({ error: "date invalide" }, 400);
     if (d.getUTCFullYear() < 2020 || d.getTime() > Date.now() + 2 * 86400000) return json({ error: "date hors limites" }, 400);
-    await store.set(`${day}/${who}`, String(value));
+    // Une réponse validée ne peut plus être changée.
+    const key = `${day}/${who}`;
+    const existing = await store.get(key);
+    if (existing !== null && existing !== undefined) return json({ error: "déjà validé", value: Number(existing) }, 409);
+    await store.set(key, String(value));
     return json({ ok: true });
   }
 

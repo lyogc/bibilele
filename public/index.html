@@ -79,6 +79,13 @@ button.mood {
 button.mood canvas { width: 100%; max-width: 60px; height: auto; aspect-ratio: 16 / 18; image-rendering: pixelated; display: block; }
 button.mood:hover { transform: translateY(-2px); border-color: var(--magenta); }
 button.mood[aria-pressed="true"] { border-color: var(--lav); background: var(--wine); color: #fff4fb; }
+.validate { background: var(--magenta); border: 3px solid var(--lav); color: #fff4fb; font: 700 14px var(--font-body); padding: 8px 12px; min-height: 40px; cursor: pointer; }
+.validate:disabled { background: var(--plum); border-color: var(--wine); color: var(--violet); cursor: default; opacity: .75; }
+.validate:not(:disabled):hover { background: #c23d84; }
+.who.locked button.mood:not([aria-pressed="true"]) { opacity: .35; }
+.who.locked button.mood { cursor: default; }
+.who.locked button.mood:hover { transform: none; border-color: var(--wine); }
+.who.locked button.mood[aria-pressed="true"]:hover { border-color: var(--lav); }
 button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
 .purse { display: flex; align-items: center; gap: 14px; background: var(--card); border: 3px solid var(--wine); padding: 12px 16px; }
 .purse .coin { flex: none; width: 32px; height: 32px; background: #ffd34e; border: 3px solid #b7791f; box-shadow: inset -4px -4px 0 #e9a43b, inset 3px 3px 0 #fff0a0; border-radius: 50%; }
@@ -1014,7 +1021,7 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
 
   var LABELS = ['Mal', 'Pas top', 'Bof', 'Bien', 'Au top'];
   var pickers = document.getElementById('pickers');
-  var buttons = { bilge: [], lele: [] };
+  var buttons = { bilge: [], lele: [] }, vbtn = {}, boxes = {}, draft = {};
   ['bilge', 'lele'].forEach(function (who) {
     var box = document.createElement('div'); box.className = 'who';
     var h = document.createElement('h3'); h.textContent = NAMES[who] + ', ton humeur ce matin ?'; box.appendChild(h);
@@ -1029,12 +1036,19 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
       b.addEventListener('click', function () { pick(who, v); });
       row.appendChild(b); buttons[who].push(b);
     })(v);
+    var vb = document.createElement('button'); vb.type = 'button'; vb.className = 'validate'; vb.textContent = 'Choisis ton humeur';
+    vb.disabled = true; vb.addEventListener('click', function () { validate(who); });
+    box.appendChild(vb); vbtn[who] = vb; boxes[who] = box;
     pickers.appendChild(box);
   });
 
   function sync() {
     ['bilge', 'lele'].forEach(function (who) {
+      var lk = isLocked(cur, who), dv = draft[cur + who] || 0;
       buttons[who].forEach(function (b, i) { b.setAttribute('aria-pressed', state[who] === i + 1 ? 'true' : 'false'); });
+      boxes[who].classList.toggle('locked', lk);
+      vbtn[who].disabled = lk || !dv;
+      vbtn[who].textContent = lk ? 'Choix validé ✓' : (dv ? 'Valider mon choix : ' + LABELS[dv - 1] : 'Choisis ton humeur');
     });
     readout(); draw(now()); renderStats();
   }
@@ -1057,13 +1071,23 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
   function persist() {
     try { localStorage.setItem(CACHE, JSON.stringify(days)); localStorage.setItem(OUTBOX, JSON.stringify(outbox)); } catch (e) {}
   }
-  function pick(who, v) {
-    state[who] = v;
+  function isLocked(day, who) { var e = days[day]; return !!(e && e[WHO[who]] > 0); }
+  function stateFor(day) {
+    ['bilge', 'lele'].forEach(function (w) { state[w] = isLocked(day, w) ? days[day][WHO[w]] : (draft[day + w] || 0); });
+  }
+  function pick(who, v) {            // simple essai : rien n'est enregistré avant « Valider »
+    if (isLocked(cur, who)) return;
+    draft[cur + who] = v; state[who] = v; sync();
+  }
+  function validate(who) {
+    var v = draft[cur + who];
+    if (!v || isLocked(cur, who)) return;
     var e = (days[cur] || [0, 0]).slice(); e[WHO[who]] = v; days[cur] = e;
+    delete draft[cur + who];
     lastWrite[cur + who] = Date.now();
     outbox = outbox.filter(function (o) { return !(o.day === cur && o.who === who); });
     outbox.push({ day: cur, who: who, value: v });
-    persist(); sync(); renderCoins(); flush();
+    persist(); stateFor(cur); sync(); flush();
   }
   function flush() {
     if (flushing || !outbox.length) return Promise.resolve();
@@ -1071,7 +1095,7 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
     var o = outbox[0];
     return fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(o) })
       .then(function (r) {
-        if (!r.ok) throw new Error('http ' + r.status);
+        if (!r.ok && r.status !== 409) throw new Error('http ' + r.status);
         net = 'ok';
         outbox = outbox.filter(function (x) { return !(x.day === o.day && x.who === o.who && x.value === o.value); });
         persist(); flushing = false; renderStats(); fetchShop();
@@ -1090,8 +1114,7 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
       ['bilge', 'lele'].forEach(function (w) { var i = WHO[w]; if (srv[i] && !pending(k, w)) loc[i] = srv[i]; });
       days[k] = loc;
     });
-    var e = days[cur] || [0, 0];
-    state.bilge = e[0]; state.lele = e[1];
+    stateFor(cur);
     if (JSON.stringify(days) !== before) { persist(); sync(); }
     renderCoins();
   }
@@ -1223,8 +1246,7 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
   }
   function setDay(k) {
     if (!k || k > todayKey) return;
-    cur = k; var e = days[k];
-    state.bilge = e ? e[0] : 0; state.lele = e ? e[1] : 0;
+    cur = k; stateFor(k);
     var d = parseKey(k); vm = { y: d.getFullYear(), m: d.getMonth() };
     dayUI(); sync(); poll();
   }
