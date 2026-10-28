@@ -1,0 +1,835 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Baromètre du bonheur</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600&family=Pixelify+Sans:wght@500;700&display=swap">
+<style>
+/* Layout: une scène pixel art 16:9 en haut, le relevé du baromètre dessous, puis deux cartes de choix côte à côte (empilées sur téléphone). */
+:root {
+  --plum: #2b1a2e;
+  --ink: #1d1120;
+  --wine: #6b2a4f;
+  --magenta: #a8336f;
+  --violet: #a77bcf;
+  --lav: #e8cdea;
+  --card: #3a2342;
+  --bilge: #f0a93c;
+  --lele: #7f9cf0;
+  --sun: #ffd34e;
+  --font-display: 'Pixelify Sans', 'Courier New', monospace;
+  --font-body: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--plum);
+  color: var(--lav);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.5;
+  padding-block: 0 36px;
+}
+.wrap {
+  max-width: 792px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px;
+  padding-top: 24px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+header { display: flex; flex-direction: column; gap: 4px; }
+.eyebrow { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--violet); font-weight: 600; }
+h1 { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: clamp(30px, 7vw, 44px); line-height: 1.05; text-wrap: balance; color: #fff4fb; }
+.dayrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-top: 4px; }
+.daytext { color: var(--violet); text-transform: capitalize; font-weight: 600; min-width: 11ch; }
+button.dbtn, button.today, input.dayinput {
+  background: var(--card); border: 2px solid var(--wine); color: var(--lav); font: 600 14px var(--font-body);
+  padding: 4px 10px; cursor: pointer; min-height: 32px;
+}
+button.dbtn { width: 32px; padding: 4px 0; font-size: 18px; line-height: 1; }
+button.dbtn:disabled { opacity: .35; cursor: default; }
+button.dbtn:not(:disabled):hover, button.today:hover, input.dayinput:hover { border-color: var(--magenta); }
+input.dayinput { color-scheme: dark; }
+
+.frame { border-bottom: 4px solid var(--lav); box-shadow: 0 6px 0 var(--wine); background: var(--ink); line-height: 0; }
+#stage { width: 100%; height: min(56.25vw, 62vh); min-height: 200px; display: block; object-fit: cover; object-position: 50% 85%; image-rendering: pixelated; }
+
+.readout { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 24px; }
+.readout .text { flex: 1 1 280px; min-width: 0; }
+.readout h2 { margin: 0 0 2px; font-family: var(--font-display); font-weight: 500; font-size: clamp(22px, 5vw, 28px); line-height: 1.15; text-wrap: balance; color: #fff4fb; }
+.readout p { margin: 0; color: var(--lav); max-width: 52ch; }
+.gauge { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.gauge .label { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--violet); font-weight: 600; display: flex; gap: 10px; }
+.gauge .label b { font-family: var(--font-display); font-size: 16px; letter-spacing: 0; color: var(--lav); font-weight: 700; }
+.pips { display: flex; gap: 4px; }
+.pip { width: 22px; height: 22px; background: var(--card); border: 2px solid var(--wine); }
+
+.pickers { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 16px; }
+.who { background: var(--card); border: 3px solid var(--wine); padding: 14px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.who h3 { margin: 0; font-family: var(--font-display); font-weight: 500; font-size: 20px; color: #fff4fb; }
+.moods { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+button.mood {
+  background: var(--plum); border: 3px solid var(--wine); color: var(--lav);
+  padding: 8px 2px 8px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px;
+  font: 600 12px/1.2 var(--font-body); transition: transform .1s;
+}
+button.mood canvas { width: 100%; max-width: 72px; height: auto; aspect-ratio: 16 / 18; image-rendering: pixelated; display: block; }
+button.mood:hover { transform: translateY(-2px); border-color: var(--magenta); }
+button.mood[aria-pressed="true"] { border-color: var(--lav); background: var(--wine); color: #fff4fb; }
+button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
+.stats { background: var(--card); border: 3px solid var(--wine); padding: 16px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.stats-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
+.stats h2 { margin: 0; font-family: var(--font-display); font-weight: 500; font-size: 24px; color: #fff4fb; }
+.monthnav { display: flex; align-items: center; gap: 8px; }
+.monthlabel { min-width: 12ch; text-align: center; text-transform: capitalize; font-weight: 600; color: var(--lav); }
+.note { margin: 0; font-size: 13px; color: var(--violet); }
+.note.sample { color: var(--sun); }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+.tile { background: var(--plum); border: 2px solid var(--wine); padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.tile .k { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; font-weight: 600; display: flex; align-items: center; gap: 6px; color: var(--violet); }
+.tile .v { font-family: var(--font-display); font-size: 26px; font-weight: 700; color: #fff4fb; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.tile .s { font-size: 13px; color: var(--lav); }
+.sw { display: inline-block; width: 10px; height: 10px; flex: none; }
+.chart { width: 100%; height: auto; display: block; }
+.chart text { font-family: var(--font-body); font-size: 14px; fill: var(--violet); }
+.chart .grid { stroke: var(--wine); stroke-width: 1; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; color: var(--lav); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.facts { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.facts li { padding-left: 14px; position: relative; max-width: 62ch; }
+.facts li::before { content: ""; position: absolute; left: 0; top: .6em; width: 6px; height: 6px; background: var(--magenta); }
+.facts b { color: #fff4fb; }
+@media (prefers-reduced-motion: reduce) { button.mood { transition: none; } }
+</style>
+</head>
+<body>
+
+<section class="frame" aria-label="Scène du jour">
+  <canvas id="stage" role="img" aria-label="Scène en pixel art de Bilge et Lélé"></canvas>
+</section>
+
+<main class="wrap">
+  <header>
+    <span class="eyebrow">Bilge &amp; Lélé</span>
+    <h1>Baromètre du bonheur</h1>
+    <div class="dayrow">
+      <button class="dbtn" id="dprev" type="button" aria-label="Jour précédent">&#8249;</button>
+      <span class="daytext" id="daytext"></span>
+      <button class="dbtn" id="dnext" type="button" aria-label="Jour suivant">&#8250;</button>
+      <input class="dayinput" id="dayinput" type="date" aria-label="Choisir un jour">
+      <button class="today" id="dtoday" type="button" hidden>Aujourd&rsquo;hui</button>
+    </div>
+  </header>
+
+  <section class="readout" aria-live="polite">
+    <div class="text">
+      <h2 id="title"></h2>
+      <p id="caption"></p>
+    </div>
+    <div class="gauge">
+      <div class="label">Baromètre <b id="gaugeval">–</b></div>
+      <div class="pips" id="pips"></div>
+    </div>
+  </section>
+
+  <section class="pickers" id="pickers"></section>
+
+  <section class="stats" aria-label="Statistiques">
+    <div class="stats-head">
+      <h2>Statistiques du mois</h2>
+      <div class="monthnav">
+        <button class="dbtn" id="mprev" type="button" aria-label="Mois précédent">&#8249;</button>
+        <span class="monthlabel" id="monthlabel"></span>
+        <button class="dbtn" id="mnext" type="button" aria-label="Mois suivant">&#8250;</button>
+      </div>
+    </div>
+    <p class="note" id="statnote"></p>
+    <div class="tiles" id="tiles"></div>
+    <svg class="chart" id="chart" viewBox="0 0 520 170" role="img" aria-label="Humeur de Bilge et de Lélé jour par jour"></svg>
+    <div class="legend" id="legend"></div>
+    <ul class="facts" id="facts"></ul>
+  </section>
+</main>
+
+<script>
+(function () {
+  'use strict';
+  var W = 288, H = 162, DX = 48, DY = 54, HY = 64; /* la scène d'origine (192x108) est centrée dans un monde plus grand */
+  var stage = document.getElementById('stage');
+  stage.width = W; stage.height = H;
+  var g = stage.getContext('2d');
+
+  /* ---------- helpers ---------- */
+  function R(c, x, y, w, h, col) { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h); }
+  function disc(c, cx, cy, rad, col) {
+    c.fillStyle = col;
+    for (var y = -rad; y <= rad; y++) {
+      var w = Math.floor(Math.sqrt(rad * rad - y * y + rad * 0.4));
+      c.fillRect(Math.round(cx - w), Math.round(cy + y), w * 2 + 1, 1);
+    }
+  }
+  function rnd(n) { var x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); }
+  function drift(t, x0, sp) { var L = W + 80; return (((x0 + t * sp) % L) + L) % L - 50 - DX; }
+
+  /* ---------- personnages ---------- */
+  function head(c, who, mood, ox, oy, bust) {
+    function P(x, y, w, h, col) { R(c, ox + x, oy + y, w, h, col); }
+    var B = who === 'bilge';
+    var skin = B ? '#dc9d74' : '#d9a47e', sh = B ? '#c4825a' : '#c28a64';
+    var hair = B ? '#3a2219' : '#2c1d17', hi = B ? '#5b3828' : '#46302a';
+    var E = '#1d1120', WH = '#fff6ee', LIP = B ? '#b03a5c' : '#9a4650';
+    var TEAR = '#7cc4ff', BL = '#ea8f84', GOLD = '#f2c14e', beard = '#33241c';
+
+    if (B) { P(2, 3, 12, 13, hair); P(3, 2, 10, 1, hair); P(4, 1, 8, 1, hair); }
+    else { P(3, 2, 10, 3, hair); P(4, 1, 8, 1, hair); }
+    P(6, 12, 4, B ? 4 : 2, skin);
+    P(4, 4, 8, 8, skin); P(5, 12, 6, 1, skin);
+    if (B) { P(4, 4, 3, 2, hair); P(9, 4, 3, 2, hair); P(5, 2, 3, 1, hi); }
+    else { P(3, 4, 1, 3, hair); P(12, 4, 1, 3, hair); P(4, 4, 8, 1, hair); P(5, 2, 4, 1, hi); P(3, 7, 1, 2, skin); P(12, 7, 1, 2, skin); }
+    P(7, 8, 2, 1, sh);
+    if (B) P(6, 9, 1, 1, GOLD);
+    if (!B) { P(4, 10, 8, 3, beard); P(5, 13, 6, 1, beard); P(4, 9, 8, 1, beard); }
+
+    if (mood === 'happy') {
+      P(5, 6, 2, 1, E); P(4, 7, 1, 1, E); P(7, 7, 1, 1, E);
+      P(9, 6, 2, 1, E); P(8, 7, 1, 1, E); P(11, 7, 1, 1, E);
+      if (B) { P(4, 9, 2, 1, BL); P(10, 9, 2, 1, BL); P(5, 10, 1, 1, LIP); P(10, 10, 1, 1, LIP); P(6, 10, 4, 1, WH); P(6, 11, 4, 1, LIP); }
+      else { P(6, 10, 4, 1, WH); P(7, 11, 2, 1, LIP); }
+    } else if (mood === 'neutral') {
+      P(5, 6, 2, 2, E); P(5, 6, 1, 1, WH); P(9, 6, 2, 2, E); P(9, 6, 1, 1, WH);
+      if (B) P(6, 11, 4, 1, LIP); else P(6, 10, 4, 1, '#b98070');
+    } else if (mood === 'good') {
+      P(5, 6, 2, 2, E); P(5, 6, 1, 1, WH); P(9, 6, 2, 2, E); P(9, 6, 1, 1, WH);
+      if (B) { P(4, 9, 2, 1, BL); P(10, 9, 2, 1, BL); P(5, 10, 1, 1, LIP); P(10, 10, 1, 1, LIP); P(6, 11, 4, 1, LIP); }
+      else { P(5, 10, 1, 1, '#c27a6a'); P(10, 10, 1, 1, '#c27a6a'); P(6, 11, 4, 1, '#c27a6a'); }
+    } else {
+      P(5, 8, 2, 1, E); P(9, 8, 2, 1, E);
+      P(5, 7, 1, 1, hair); P(6, 6, 1, 1, hair); P(10, 7, 1, 1, hair); P(9, 6, 1, 1, hair);
+      P(5, 9, 1, 2, TEAR); P(10, 9, 1, 2, TEAR);
+      if (B) { P(6, 10, 4, 1, LIP); P(5, 11, 1, 1, LIP); P(10, 11, 1, 1, LIP); }
+      else { P(6, 10, 4, 1, LIP); P(5, 11, 1, 1, LIP); P(10, 11, 1, 1, LIP); }
+    }
+
+    if (bust) {
+      if (B) { P(0, 16, 16, 2, skin); P(6, 15, 4, 1, GOLD); P(7, 16, 2, 2, GOLD); P(7, 16, 1, 1, '#fff0a0'); }
+      else { P(0, 14, 16, 4, '#26396b'); P(6, 14, 4, 1, skin); P(5, 14, 1, 1, '#34508f'); P(10, 14, 1, 1, '#34508f'); }
+      if (mood === 'happy') { P(1, 2, 1, 1, GOLD); P(14, 1, 1, 1, GOLD); P(0, 5, 1, 1, WH); }
+    }
+  }
+
+  function arm(c, kind, side, hx, hy, top, skin) {
+    var bx = hx + 3, by = hy + 14, left = side === 'L';
+    var ax = left ? bx - 2 : bx + 10;
+    if (kind === 'down') { R(c, ax, by + 1, 2, 7, top); R(c, ax, by + 8, 2, 2, skin); }
+    else if (kind === 'up') {
+      var vx = left ? hx - 2 : hx + 16, sx = left ? bx - 3 : bx + 10;
+      R(c, sx, by + 1, 3, 2, top); R(c, vx, by - 9, 2, 11, top); R(c, vx, by - 11, 2, 2, skin);
+    } else if (kind === 'cup') { R(c, ax, by + 1, 2, 5, top); R(c, ax + (left ? 1 : -1), by + 5, 2, 2, skin); }
+  }
+
+  function colors(who) {
+    var B = who === 'bilge';
+    return { top: B ? '#e9a43b' : '#26396b', pants: B ? '#4f62a8' : '#3b3a4a', skin: B ? '#dc9d74' : '#d9a47e' };
+  }
+
+  function person(who, x, y, mood, aL, aR) {
+    var k = colors(who), bx = x + 3, by = y + 14;
+    R(g, bx, by, 10, 9, k.top);
+    R(g, bx + 1, by + 9, 3, 6, k.pants); R(g, bx + 6, by + 9, 3, 6, k.pants);
+    R(g, bx, by + 15, 4, 2, '#1d1120'); R(g, bx + 6, by + 15, 4, 2, '#1d1120');
+    arm(g, aL, 'L', x, y, k.top, k.skin); arm(g, aR, 'R', x, y, k.top, k.skin);
+    head(g, who, mood, x, y, false);
+  }
+
+  /* ---------- décor ---------- */
+  function sky(b) { for (var i = 0; i < b.length; i++) { var y0 = i === 0 ? -DY : b[i][1]; R(g, -DX, y0, W, b[i][2] - y0, b[i][0]); } }
+  function ground(y, col, edge) { R(g, -DX, y, W, 108 - y, col); R(g, -DX, y, W, 2, edge); }
+  function mountain(cx, top, base, half, body, edge, cap) {
+    var h = base - top;
+    for (var dy = 0; dy <= h; dy++) {
+      var hw = Math.round(half * dy / h + (rnd(dy * 3 + cx) - 0.5) * 3 * Math.min(1, dy / 8));
+      if (hw < 0) hw = 0;
+      var x = cx - hw, w = hw * 2 + 1, y = top + dy;
+      R(g, x, y, w, 1, body);
+      R(g, x, y, Math.min(w, 2 + Math.floor(rnd(dy + 7) * 3)), 1, edge);
+      if (cap && dy < h * 0.16) R(g, x, y, w, 1, cap);
+    }
+  }
+  function cloud(x, y, s, light, shade) {
+    var parts = [[0, 2, 7], [9, -3, 9], [20, -1, 8], [28, 3, 6], [13, 3, 8], [4, 4, 6], [22, 4, 6]], i, p;
+    for (i = 0; i < parts.length; i++) { p = parts[i]; disc(g, x + p[0] * s, y + p[1] * s + 3, Math.round(p[2] * s), shade); }
+    for (i = 0; i < parts.length; i++) { p = parts[i]; disc(g, x + p[0] * s, y + p[1] * s, Math.round(p[2] * s), light); }
+  }
+  function sunDisc(cx, cy, t) {
+    g.globalAlpha = 0.22; disc(g, cx, cy, 19, '#fff0a0');
+    g.globalAlpha = 0.35; disc(g, cx, cy, 14, '#fff0a0');
+    g.globalAlpha = 1;
+    for (var k = 0; k < 12; k++) {
+      var a = k * Math.PI / 6 + t * 0.3, len = (k % 2 ? 4 : 7) + Math.round(Math.sin(t * 3 + k) * 1.5);
+      for (var rr = 13; rr < 13 + len; rr += 2) R(g, cx + Math.cos(a) * rr - 1, cy + Math.sin(a) * rr - 1, 2, 2, '#ffd34e');
+    }
+    disc(g, cx, cy, 10, '#ffd34e'); disc(g, cx - 2, cy - 2, 6, '#fff0a0');
+  }
+  function rain(t, n, x0, x1, y0, y1, skip) {
+    for (var i = 0; i < n; i++) {
+      var x = Math.round(x0 + rnd(i + 1) * (x1 - x0));
+      var sp = 55 + rnd(i + 40) * 35, span = y1 - y0 + 6;
+      var y = ((t * sp + rnd(i + 80) * span) % span) + y0 - 3;
+      if (skip && skip(x, y)) continue;
+      if (y >= y1 - 2) R(g, x - 1, y1 - 1, 3, 1, '#cfc4f5');
+      else R(g, x, y, 1, 3, '#a89ae0');
+    }
+  }
+  function umbrella(cx, top, a, b, c1, c2, c3) {
+    c1 = c1 || '#a8336f'; c2 = c2 || '#c85a93'; c3 = c3 || '#6b2a4f';
+    for (var dy = 0; dy <= b; dy++) {
+      var ratio = (b - dy) / b, w = Math.floor(a * Math.sqrt(1 - ratio * ratio));
+      for (var xx = cx - w; xx <= cx + w; xx++) R(g, xx, top + dy, 1, 1, (((xx - cx + 64) >> 3) % 2) ? c2 : c1);
+    }
+    R(g, cx, top - 3, 1, 3, '#d8c8e8');
+    R(g, cx - a, top + b, 2 * a + 1, 1, c3);
+  }
+  function heart(x, y, col) {
+    var rows = ['.##.##.', '#######', '#######', '.#####.', '..###..', '...#...'];
+    for (var j = 0; j < rows.length; j++) for (var i = 0; i < 7; i++) if (rows[j].charAt(i) === '#') R(g, x + i, y + j, 1, 1, col);
+  }
+  function roundTree(x, base, h, p) {
+    var th = Math.round(h * 0.45), r1 = Math.round(h * 0.32), cy = base - Math.round(h * 0.62);
+    R(g, x - 1, base - th, 3, th, p.t);
+    disc(g, x, cy, r1, p.l);
+    disc(g, x - r1 * 0.55, cy + r1 * 0.3, Math.round(r1 * 0.75), p.l);
+    disc(g, x + r1 * 0.55, cy + r1 * 0.3, Math.round(r1 * 0.75), p.l);
+    disc(g, x - r1 * 0.3, cy - r1 * 0.3, Math.round(r1 * 0.5), p.h);
+  }
+  function pine(x, base, h, p) {
+    R(g, x - 1, base - 3, 3, 3, p.t);
+    var th = Math.round(h * 0.42);
+    for (var i = 0; i < 3; i++) {
+      var top = base - h + Math.round(i * h * 0.24), hwMax = 3 + i * 3;
+      for (var dy = 0; dy <= th; dy++) {
+        var hw = Math.round(hwMax * dy / th);
+        R(g, x - hw, top + dy, hw * 2 + 1, 1, p.p);
+        R(g, x - hw, top + dy, Math.min(2, hw * 2 + 1), 1, p.h);
+      }
+    }
+  }
+  function trees(p) {
+    roundTree(-42, 95, 46, p); pine(-24, 95, 36, p); roundTree(-8, 94, 30, p);
+    pine(200, 95, 34, p); roundTree(218, 95, 42, p); pine(236, 95, 38, p);
+    roundTree(14, 95, 40, p); pine(34, 95, 34, p);
+    pine(56, 93, 22, p); pine(140, 93, 22, p);
+    roundTree(158, 95, 36, p); roundTree(180, 95, 44, p);
+  }
+  var PAL = {
+    sun: { t: '#7a4a30', l: '#4fae5c', h: '#8ee07a', p: '#3f9a62' },
+    cloudy: { t: '#5a3a4a', l: '#4f7f78', h: '#7fb0a0', p: '#3f6f6a' },
+    rain: { t: '#1d1120', l: '#2f2440', h: '#3b2d4f', p: '#2a1f38' },
+    night: { t: '#1d1120', l: '#1f1226', h: '#34203a', p: '#1a0f20' }
+  };
+  function bird(x, y, up, col) {
+    x = Math.round(x); y = Math.round(y);
+    if (up) { R(g, x, y, 1, 1, col); R(g, x + 1, y + 1, 1, 1, col); R(g, x + 2, y + 2, 1, 1, col); R(g, x + 3, y + 1, 1, 1, col); R(g, x + 4, y, 1, 1, col); }
+    else { R(g, x, y + 1, 1, 1, col); R(g, x + 1, y, 1, 1, col); R(g, x + 2, y + 1, 1, 1, col); R(g, x + 3, y, 1, 1, col); R(g, x + 4, y + 1, 1, 1, col); }
+  }
+  function flock(t, n, y0, col, seed) {
+    for (var k = 0; k < n; k++) bird(drift(t, k * 63 + seed, 7 + k * 2), y0 + k * 8 + Math.sin(t * 1.5 + k * 2) * 3, Math.floor(t * 5 + k) % 2 === 0, col);
+  }
+  function butterflies(t, n) {
+    var cols = ['#ff7aa8', '#ffd34e', '#a77bcf'];
+    for (var k = 0; k < n; k++) {
+      var x = -30 + rnd(k + 5) * 250 + Math.sin(t * 0.8 + k * 3) * 14, y = 82 - rnd(k + 9) * 8 + Math.sin(t * 1.3 + k) * 4;
+      if (Math.floor(t * 6 + k) % 2) { R(g, x - 1, y - 1, 2, 3, cols[k % 3]); R(g, x + 2, y - 1, 2, 3, cols[k % 3]); }
+      else R(g, x, y - 1, 1, 3, cols[k % 3]);
+      R(g, x + 1, y, 1, 2, '#2b1a2e');
+    }
+  }
+  function leaves(t, n) {
+    for (var k = 0; k < n; k++) {
+      var x = ((rnd(k + 1) * W + Math.sin(t * 0.9 + k) * 8 + t * 4) % W) - DX, y = ((t * 9 + rnd(k + 20) * H) % (92 + DY)) - DY;
+      R(g, x, y, 2, 2, k % 2 ? '#e9a43b' : '#d9602a');
+    }
+  }
+  function fireflies(t, n) {
+    for (var k = 0; k < n; k++) {
+      var x = rnd(k + 50) * W - DX + Math.sin(t * 0.7 + k) * 5, y = 72 + rnd(k + 60) * 22 + Math.sin(t + k) * 3;
+      if (Math.sin(t * 2 + k * 3) > 0.2) { g.globalAlpha = 0.35; R(g, x - 1, y - 1, 3, 3, '#fff0a0'); g.globalAlpha = 1; R(g, x, y, 1, 1, '#fff0a0'); }
+    }
+  }
+  function speckle(x0, y0, w, h, cols, seed, dens) {
+    for (var y = y0; y < y0 + h; y += 2) for (var x = x0; x < x0 + w; x += 2) {
+      if (rnd(x * 0.37 + y * 1.13 + seed) < dens) R(g, x, y, 2, 2, cols[Math.floor(rnd(x * 1.7 + y * 0.9 + seed * 3) * cols.length)]);
+    }
+  }
+  function foliage(cx, cy, rx, ry, c, seed) {
+    for (var yy = -ry; yy <= ry; yy += 2) {
+      var half = rx * Math.sqrt(1 - (yy / ry) * (yy / ry));
+      for (var xx = -half; xx <= half; xx += 2) {
+        var v = rnd((cx + xx) * 0.73 + (cy + yy) * 1.31 + seed) - (yy / ry) * 0.3 - (xx / rx) * 0.15;
+        R(g, cx + xx, cy + yy, 2, 2, v < 0.3 ? c[0] : (v < 0.7 ? c[1] : c[2]));
+      }
+    }
+  }
+  function poppy(x, y, big) {
+    R(g, x, y, big ? 3 : 2, big ? 3 : 2, '#e03a2e'); R(g, x, y, 1, 1, '#ff7a5a');
+    if (big) R(g, x + 1, y + 1, 1, 1, '#7a1f2e');
+  }
+  function boat(x, y) {
+    var i, w;
+    R(g, x, y - 3, 18, 3, '#2b2b3a'); R(g, x - 2, y - 4, 2, 1, '#2b2b3a'); R(g, x + 18, y - 4, 3, 1, '#2b2b3a'); R(g, x + 2, y - 4, 14, 1, '#e8d8a8');
+    R(g, x + 8, y - 26, 1, 23, '#c9895a');
+    for (i = 0; i < 20; i++) { w = Math.round(i * 0.55); R(g, x + 9, y - 24 + i, w + 1, 1, '#f3ead8'); R(g, x + 9, y - 24 + i, Math.min(2, w + 1), 1, '#cfc6d0'); }
+    for (i = 0; i < 12; i++) { w = Math.round(i * 0.5); R(g, x + 7 - w, y - 20 + i, w + 1, 1, '#e8dfe8'); }
+    R(g, x + 1, y, 16, 1, '#1f3f7a'); R(g, x + 3, y + 2, 12, 1, '#27508f'); R(g, x + 5, y + 4, 8, 1, '#2f64b0');
+  }
+  function hillTop(x) { return Math.round(70 + (x + DX) * 0.07); }
+  function bubble(x, y) {
+    R(g, x, y, 11, 11, '#e8cdea'); R(g, x + 4, y + 11, 3, 2, '#e8cdea');
+    var q = ['.###.', '#...#', '....#', '...#.', '..#..', '.....', '..#..'];
+    for (var j = 0; j < q.length; j++) for (var i = 0; i < 5; i++) if (q[j].charAt(i) === '#') R(g, x + 3 + i, y + 2 + j, 1, 1, '#2b1a2e');
+  }
+
+  /* ---------- scènes ---------- */
+  function drawWait(t, s, m) {
+    sky([['#5a1f4e', 0, 22], ['#7a2a5c', 22, 40], ['#a8336f', 40, 58], ['#c4558f', 58, 72], ['#d98ab5', 72, 90]]);
+    for (var i = 0; i < 100; i++) {
+      var sx = Math.floor(rnd(i + 3) * W) - DX, sy = Math.floor(rnd(i + 90) * (60 + DY)) - DY;
+      if (Math.sin(t * 2 + i * 1.7) > -0.3) R(g, sx, sy, 1, 1, i % 7 === 0 ? '#fff0a0' : '#fbe9f5');
+    }
+    mountain(-34, 40, 90, 54, '#2b1a2e', '#a8336f', null); mountain(226, 34, 90, 60, '#2b1a2e', '#a8336f', null);
+    mountain(96, 24, 90, 64, '#2b1a2e', '#a8336f', null);
+    cloud(drift(t, 20, 3), 52, 1, '#e8cdea', '#a77bcf');
+    cloud(drift(t, 120, 2), 40, 0.9, '#e8cdea', '#a77bcf');
+    cloud(drift(t, 240, 2.5), -20, 1.1, '#e8cdea', '#a77bcf'); cloud(drift(t, 60, 1.5), -38, 1.3, '#e8cdea', '#a77bcf');
+    ground(90, '#3a2243', '#6b2a4f');
+    trees(PAL.night); fireflies(t, 26);
+    person('bilge', 70, HY, m.bilge, 'down', 'down');
+    person('lele', 106, HY, m.lele, 'down', 'down');
+    if (!s.bilge) bubble(75, HY - 16);
+    if (!s.lele) bubble(111, HY - 16);
+  }
+
+  function drawRain(t, s, m) {
+    sky([['#2a1930', 0, 20], ['#3a2445', 20, 38], ['#4a2f58', 38, 58], ['#5b3d6b', 58, 76], ['#6e4d80', 76, 90]]);
+    mountain(-34, 40, 90, 54, '#241628', '#6b2a4f', null); mountain(222, 34, 90, 56, '#241628', '#6b2a4f', null);
+    mountain(38, 36, 90, 50, '#241628', '#6b2a4f', null);
+    mountain(160, 46, 90, 40, '#241628', '#6b2a4f', null);
+    for (var i = 0; i < 11; i++) cloud(drift(t, i * 30, 5 + (i % 3) * 2), -36 + (i % 6) * 12, 1.4, '#5a4268', '#463354');
+    ground(90, '#2b1a2e', '#4a2f58');
+    trees(PAL.rain);
+    R(g, 38, 99, 30, 3, '#5b4a8c'); R(g, 124, 101, 36, 3, '#5b4a8c');
+    if (Math.floor(t * 2) % 2) { R(g, 46, 99, 4, 1, '#a89ae0'); R(g, 140, 101, 4, 1, '#a89ae0'); }
+    rain(t, 210, -DX, W - DX, -DY, 94, function (x, y) { return Math.abs(x - 93) <= 26 && y >= 47; });
+    person('bilge', 70, HY, m.bilge, 'down', 'none');
+    person('lele', 106, HY, m.lele, 'none', 'down');
+    var by = HY + 14;
+    R(g, 93, 59, 1, 28, '#d8c8e8');
+    R(g, 83, by + 2, 10, 2, '#e9a43b'); R(g, 94, by + 2, 11, 2, '#26396b');
+    R(g, 92, by + 1, 3, 4, '#dc9d74');
+    umbrella(93, 47, 26, 12);
+    // petit oiseau qui s'abrite sur le parapluie
+    R(g, 90, 44, 5, 3, '#6fb1e0'); R(g, 94, 42, 3, 3, '#6fb1e0'); R(g, 97, 43, 1, 1, '#ffd34e'); R(g, 95, 43, 1, 1, '#1d1120'); R(g, 90, 46, 4, 1, '#fff4fb');
+    if (Math.floor(t * 2) % 2) R(g, 89, 45, 1, 2, '#6fb1e0');
+  }
+
+  function drawCloudy(t, s, m) {
+    sky([['#8f6fbb', 0, 24], ['#a581ca', 24, 44], ['#b999d6', 44, 64], ['#cdb4e0', 64, 90]]);
+    mountain(-34, 36, 90, 56, '#6e3a68', '#a65a96', null); mountain(222, 30, 90, 60, '#5b2a55', '#9a4a85', '#d9bfe3');
+    mountain(50, 30, 90, 56, '#5b2a55', '#9a4a85', '#d9bfe3');
+    mountain(150, 48, 90, 42, '#6e3a68', '#a65a96', null);
+    for (var i = 0; i < 13; i++) cloud(drift(t, i * 38, 3 + (i % 3)), -32 + (i % 7) * 11, 1.3, '#e8cdea', '#b898d2');
+    ground(90, '#7a6fa0', '#9488b8');
+    trees(PAL.cloudy);
+    flock(t, 2, 34, '#4a2f58', 20);
+    leaves(t, 12);
+    R(g, 56, 72, 80, 3, '#6e4630'); R(g, 56, 72, 3, 18, '#6e4630'); R(g, 133, 72, 3, 18, '#6e4630');
+    person('bilge', 70, HY, m.bilge, 'cup', 'cup');
+    person('lele', 106, HY, m.lele, 'cup', 'cup');
+    var by = HY + 14, xs = [73, 109];
+    for (var k = 0; k < 2; k++) {
+      var bx = xs[k];
+      R(g, bx + 3, by + 3, 4, 4, '#fff6ee'); R(g, bx + 3, by + 3, 4, 1, '#7a4a30'); R(g, bx + 2, by + 5, 6, 2, k ? '#d9a47e' : '#dc9d74');
+      g.globalAlpha = 0.7;
+      for (var j = 0; j < 3; j++) R(g, bx + 3 + j + Math.round(Math.sin(t * 3 + j + k) * 1), by + 2 - ((t * 6 + j * 2) % 5), 1, 2, '#fff6ee');
+      g.globalAlpha = 1;
+    }
+    R(g, 54, 85, 84, 3, '#8a5a3a'); R(g, 54, 85, 84, 1, '#a87648'); R(g, 58, 88, 3, 9, '#6e4630'); R(g, 131, 88, 3, 9, '#6e4630');
+  }
+
+  function drawSun(t, s, m) {
+    sky([['#f06ea0', 0, 18], ['#f58db4', 18, 34], ['#f9a9c4', 34, 50], ['#fcc6c8', 50, 66], ['#ffe0b8', 66, 90]]);
+    sunDisc(150, 26, t);
+    mountain(-34, 40, 90, 54, '#a04a8c', '#d878b0', null); mountain(226, 30, 90, 56, '#8c3c7a', '#c45a98', '#fbe9f5');
+    mountain(52, 34, 90, 52, '#8c3c7a', '#c45a98', '#fbe9f5');
+    mountain(150, 54, 90, 34, '#a04a8c', '#d878b0', null);
+    cloud(drift(t, 10, 5), 14, 1.2, '#fff4fb', '#f3c6e4');
+    cloud(drift(t, 95, 3), 38, 1, '#fff4fb', '#f3c6e4');
+    cloud(drift(t, 150, 4), 6, 1.3, '#fff4fb', '#f3c6e4');
+    cloud(drift(t, 210, 4), -22, 1.4, '#fff4fb', '#f3c6e4'); cloud(drift(t, 60, 3), -40, 1.2, '#fff4fb', '#f3c6e4'); cloud(drift(t, 270, 5), -8, 1.1, '#fff4fb', '#f3c6e4');
+    ground(90, '#7bc77a', '#a6e08c');
+    R(g, -DX, 100, W, 8, '#5aa862');
+    trees(PAL.sun);
+    flock(t, 6, -14, '#5a1f4e', 5);
+    for (var i = 0; i < 34; i++) R(g, rnd(i + 11) * W - DX, 92 + rnd(i + 31) * 14, 2, 2, ['#ff7aa8', '#ffd34e', '#fff4fb'][i % 3]);
+    butterflies(t, 5);
+    var p = Math.floor(t * 4) % 2;
+    person('bilge', 70, HY + (p === 0 ? -2 : 0), m.bilge, p === 0 ? 'up' : 'down', p === 0 ? 'down' : 'up');
+    person('lele', 106, HY + (p === 0 ? 0 : -2), m.lele, p === 0 ? 'down' : 'up', p === 0 ? 'up' : 'down');
+    for (var k = 0; k < 3; k++) {
+      var nx = 48 + k * 46, ny = 62 - ((t * 14 + k * 17) % 40);
+      R(g, nx, ny, 2, 2, '#fff4fb'); R(g, nx + 1, ny - 4, 1, 4, '#fff4fb');
+    }
+  }
+
+  function drawComfort(t, s, m) {
+    var sadIsBilge = s.bilge === 1;
+    var sadWho = sadIsBilge ? 'bilge' : 'lele', happyWho = sadIsBilge ? 'lele' : 'bilge';
+    var sadX = sadIsBilge ? 70 : 94, happyX = sadIsBilge ? 94 : 70;
+    var cx = sadX + 8, sunX = cx < 96 ? 160 : 32;
+    sky([['#f06ea0', 0, 18], ['#f58db4', 18, 34], ['#f9a9c4', 34, 50], ['#fcc6c8', 50, 66], ['#ffe0b8', 66, 90]]);
+    sunDisc(sunX, 26, t);
+    mountain(-34, 40, 90, 54, '#a04a8c', '#d878b0', null); mountain(226, 36, 90, 56, '#a04a8c', '#d878b0', null);
+    mountain(sunX < 96 ? 150 : 44, 44, 90, 44, '#8c3c7a', '#c45a98', '#fbe9f5');
+    cloud(drift(t, 20, 4), 8, 1.1, '#fff4fb', '#f3c6e4');
+    cloud(drift(t, 130, 3), 40, 0.9, '#fff4fb', '#f3c6e4');
+    cloud(drift(t, 200, 4), -22, 1.3, '#fff4fb', '#f3c6e4'); cloud(drift(t, 70, 3), -40, 1.1, '#fff4fb', '#f3c6e4');
+    ground(90, '#7bc77a', '#a6e08c');
+    R(g, -DX, 100, W, 8, '#5aa862');
+    trees(PAL.sun);
+    flock(t, 5, -10, '#5a1f4e', sunX < 96 ? 90 : 10);
+    butterflies(t, 4);
+    cloud(cx - 15, 28, 1.1, '#5a4268', '#463354');
+    rain(t, 26, cx - 16, cx + 16, 50, 94, null);
+    var hk = colors(happyWho), by = HY + 14;
+    var hb = Math.floor(t * 3) % 2 ? -1 : 0;
+    var farSide = happyX < sadX ? 'L' : 'R';
+    person(sadWho, sadX, HY + 1, 'sad', 'down', 'down');
+    person(happyWho, happyX, HY + hb, MOODNAMES[(sadIsBilge ? s.lele : s.bilge) - 1], farSide === 'L' ? 'up' : 'none', farSide === 'R' ? 'up' : 'none');
+    if (happyX < sadX) { R(g, 83, by + 1, 17, 2, hk.top); R(g, 98, by, 3, 3, hk.skin); }
+    else { R(g, 80, by + 1, 17, 2, hk.top); R(g, 79, by, 3, 3, hk.skin); }
+    var hx = happyX + 5;
+    g.globalAlpha = 0.9;
+    heart(hx - 6, HY - 8 - ((t * 9) % 18), '#ff5d8f');
+    heart(hx + 6, HY - 20 - ((t * 9 + 9) % 18), '#ff9ab8');
+    g.globalAlpha = 1;
+  }
+
+  function drawGarden(t, s, m) {
+    var i, k;
+    sky([['#aab6dc', 0, 20], ['#bcc6e4', 20, 44], ['#d3d8ee', 44, 90]]);
+    var GC = ['#1f4a30', '#2f6f4a', '#4f9a5a'];
+    foliage(-30, 40, 22, 28, GC, 1);
+    // pavillon
+    for (i = 0; i < 16; i++) { var rw = Math.round(30 + i * 2.4); R(g, Math.round(15 - rw / 2), 24 + i, rw, 1, i % 4 === 3 ? '#7a84b4' : '#5f6a9a'); }
+    R(g, -2, 14, 5, 12, '#c8704a'); R(g, 24, 16, 5, 12, '#c8704a'); R(g, -3, 13, 7, 2, '#e8c0a0'); R(g, 23, 15, 7, 2, '#e8c0a0');
+    R(g, -14, 40, 58, 36, '#d4724a'); R(g, -18, 38, 66, 3, '#f3ead8');
+    for (k = 0; k < 4; k++) R(g, -12 + k * 16, 41, 3, 35, '#f3ead8');
+    R(g, 2, 48, 10, 16, '#6a7ab0'); R(g, 26, 48, 10, 16, '#6a7ab0'); R(g, 2, 48, 10, 1, '#f3ead8'); R(g, 26, 48, 10, 1, '#f3ead8');
+    var bush = [[10, 76, 30, 14], [60, 70, 30, 18], [100, 72, 34, 18], [150, 66, 38, 24], [204, 70, 40, 22], [-36, 74, 26, 16]];
+    for (i = 0; i < bush.length; i++) foliage(bush[i][0], bush[i][1], bush[i][2], bush[i][3], GC, 10 + i * 7);
+    for (k = 0; k < 40; k++) poppy(-DX + rnd(k + 1) * W, 70 + rnd(k + 2) * 18, false);
+    R(g, 150, -10, 6, 102, '#8a6a7a'); R(g, 150, -10, 2, 102, '#a888a0');
+    foliage(180, -22, 62, 30, GC, 31); foliage(20, -32, 52, 24, GC, 41); foliage(112, -42, 44, 14, GC, 51);
+    foliage(-20, -50, 60, 22, GC, 61); foliage(70, -52, 56, 20, GC, 71); foliage(150, -4, 40, 16, GC, 81); foliage(215, -50, 50, 22, GC, 91); foliage(120, -10, 30, 12, GC, 101);
+    ground(90, '#5f9a46', '#85bc5a');
+    speckle(-DX, 92, W, 16, ['#4f8a3a', '#7ab050', '#9acd6a'], 5, 0.5);
+    for (k = 0; k < 70; k++) { var py = 91 + rnd(k + 3) * 14; poppy(-DX + rnd(k + 4) * W, py, py > 100); }
+    R(g, 168, 96, 9, 6, '#8aa0c8'); R(g, 166, 93, 3, 5, '#8aa0c8'); R(g, 176, 94, 2, 6, '#6a80a8');
+    R(g, 54, 72, 84, 10, '#2f6f4a'); R(g, 54, 75, 84, 1, '#1f4f36'); R(g, 54, 78, 84, 1, '#1f4f36');
+    R(g, 54, 72, 2, 18, '#1d1120'); R(g, 136, 72, 2, 18, '#1d1120');
+    person('bilge', 70, HY, m.bilge, 'cup', 'cup');
+    person('lele', 106, HY, m.lele, 'cup', 'cup');
+    var by = HY + 14, xs = [73, 109];
+    for (k = 0; k < 2; k++) { R(g, xs[k] + 1, by + 3, 8, 5, '#fff6ee'); R(g, xs[k] + 5, by + 3, 1, 5, '#c4a090'); R(g, xs[k] + 1, by + 7, 8, 1, '#a8336f'); }
+    R(g, 54, 85, 84, 3, '#3d8a5c'); R(g, 54, 85, 84, 1, '#5fae78'); R(g, 58, 88, 3, 8, '#1d1120'); R(g, 131, 88, 3, 8, '#1d1120');
+    butterflies(t, 4); flock(t, 2, -10, '#4a3a6a', 30);
+  }
+
+  function drawRiver(t, s, m) {
+    var i, k;
+    sky([['#8fb8e8', 0, 12], ['#a8c8ee', 12, 30], ['#c4d8f0', 30, 46], ['#dde8f4', 46, 60]]);
+    cloud(drift(t, 20, 3), -18, 1.4, '#f4f7fb', '#d4e0f0'); cloud(drift(t, 140, 2), -36, 1.2, '#f4f7fb', '#d4e0f0');
+    cloud(drift(t, 230, 3.5), 4, 1.0, '#f4f7fb', '#d4e0f0'); cloud(drift(t, 80, 2.5), -4, 0.9, '#f4f7fb', '#d4e0f0');
+    R(g, -DX, 52, W, 10, '#4f8a5a');
+    for (k = -3; k < 14; k++) foliage(-44 + k * 22 + rnd(k + 3) * 6, 52 + rnd(k + 8) * 3, 14, 9, ['#2f6a44', '#4f9a5a', '#7ac07a'], k * 5);
+    R(g, 60, 57, 34, 4, '#d8e4f0'); R(g, 60, 60, 34, 1, '#a8b8d0'); R(g, 150, 56, 26, 4, '#c8d8e8');
+    R(g, -DX, 60, W, 8, '#5a92d8'); R(g, -DX, 68, W, 12, '#3f78c8'); R(g, -DX, 80, W, 12, '#2f64b0');
+    for (k = 0; k < 110; k++) {
+      var sx = ((rnd(k + 1) * W + t * (rnd(k + 9) * 4 - 2)) % W + W) % W - DX, sy = 62 + rnd(k + 3) * 27, len = 3 + Math.floor(rnd(k + 6) * 6);
+      var cc = k % 3 === 0 ? '#a8d4f0' : (k % 3 === 1 ? '#2a5aa8' : '#fff4fb');
+      if (cc === '#fff4fb' && Math.sin(t * 3 + k) < 0.3) continue;
+      R(g, sx, sy, len, 1, cc);
+    }
+    boat(140 + Math.round(Math.sin(t * 0.3) * 3), 78 + Math.round(Math.sin(t * 0.8)), 0);
+    boat(-22 + Math.round(Math.sin(t * 0.25 + 1) * 3), 74 + Math.round(Math.sin(t * 0.7 + 2)), 0);
+    boat(212 + Math.round(Math.sin(t * 0.3 + 2) * 3), 72 + Math.round(Math.sin(t * 0.9)), 0);
+    ground(90, '#5f9a46', '#85bc5a');
+    speckle(-DX, 92, W, 16, ['#4f8a3a', '#7ab050', '#9acd6a'], 9, 0.45);
+    var reeds = [30, 36, 168, 176, 222];
+    for (i = 0; i < reeds.length; i++) { R(g, reeds[i], 80, 1, 14, '#2f6a44'); R(g, reeds[i] + 1, 84, 1, 10, '#4f9a5a'); }
+    for (k = 0; k < 24; k++) { var py = 93 + rnd(k + 3) * 12; poppy(-DX + rnd(k + 4) * W, py, py > 100); }
+    person('bilge', 70, HY, m.bilge, 'down', 'down');
+    person('lele', 106, HY, m.lele, 'down', Math.floor(t) % 2 ? 'up' : 'down');
+    flock(t, 3, -6, '#3a4a7a', 7);
+  }
+
+  function drawPoppies(t, s, m) {
+    var i, k, x, y, top;
+    sky([['#5aa7e2', 0, 10], ['#74b7ea', 10, 30], ['#93c8ef', 30, 48], ['#b6dbf3', 48, 100]]);
+    R(g, -DX, 72, W, 36, '#8fbf6a');
+    for (i = 0; i < 8; i++) cloud(drift(t, i * 40, 2 + (i % 3)), -34 + (i % 5) * 14, 1.5, '#f4f7fb', '#c4d4e8');
+    for (k = -3; k < 14; k++) foliage(-44 + k * 22, 66 + rnd(k + 3) * 4, 15, 10, ['#2a4f35', '#3f7a4a', '#5f9a5a'], k * 3);
+    R(g, 38, 40, 4, 34, '#5a3a30'); foliage(40, 34, 16, 22, ['#6a3a30', '#8a4a3a', '#b2684c'], 11);
+    R(g, 146, 62, 16, 9, '#e8d8d0'); R(g, 150, 64, 3, 3, '#6a7ab0');
+    for (i = 0; i < 7; i++) { var rw = 6 + i * 3; R(g, Math.round(154 - rw / 2), 56 + i, rw, 1, '#c85a4a'); }
+    for (x = -DX; x < W - DX; x += 2) { top = hillTop(x); R(g, x, top, 2, 108 - top, '#6fa850'); R(g, x, top, 2, 2, '#9acd6a'); }
+    var GR = ['#5f9a46', '#85bc5a', '#9acd6a', '#e8e070'];
+    for (y = 70; y < 108; y += 2) for (x = -DX; x < W - DX; x += 2) {
+      if (y < hillTop(x) + 2) continue;
+      if (rnd(x * 0.37 + y * 1.13 + 3) < 0.45) R(g, x, y, 2, 2, GR[Math.floor(rnd(x * 1.7 + y * 0.9 + 9) * GR.length)]);
+    }
+    for (k = 0; k < 170; k++) {
+      x = -DX + Math.pow(rnd(k + 1), 1.5) * W; top = hillTop(x); y = top + 3 + rnd(k + 2) * (108 - top - 6);
+      poppy(x, y, y > 92);
+    }
+    var by = HY + 14;
+    person('bilge', 70, HY, m.bilge, 'down', 'none');
+    person('lele', 106, HY, m.lele, Math.floor(t * 2) % 2 ? 'up' : 'down', 'down');
+    R(g, 83, by + 1, 4, 2, '#e9a43b'); R(g, 86, by - 2, 2, 4, '#dc9d74'); R(g, 87, by - 14, 1, 15, '#c8a070');
+    umbrella(87, by - 22, 14, 7, '#3b7fd6', '#5a9af0', '#2a5ab0');
+    for (k = 0; k < 16; k++) poppy(-DX + rnd(k + 70) * W, 100 + rnd(k + 80) * 6, true);
+    butterflies(t, 5); flock(t, 3, -8, '#3a4a7a', 40);
+  }
+
+  /* ---------- état ---------- */
+  var MOODNAMES = ['sad', 'neutral', 'good', 'happy'];
+  var NAMES = { bilge: 'Bilge', lele: 'Lélé' };
+  var state = { bilge: 0, lele: 0 };
+
+  function kind() { return kindFor(state.bilge, state.lele); }
+  function kindFor(a, b) {
+    if (!a || !b) return 'wait';
+    if (Math.min(a, b) === 1 && Math.max(a, b) >= 3) return 'comfort';
+    var sum = a + b;
+    if (sum <= 3) return 'rain';
+    if (sum === 4) return 'cloudy';
+    if (sum === 5) return 'garden';
+    if (sum === 6) return 'river';
+    return sum === 7 ? 'poppies' : 'sun';
+  }
+
+  function draw(t) { g.setTransform(1, 0, 0, 1, DX, DY); drawWorld(t); g.setTransform(1, 0, 0, 1, 0, 0); }
+  function drawWorld(t) {
+    var m = {
+      bilge: state.bilge ? MOODNAMES[state.bilge - 1] : 'neutral',
+      lele: state.lele ? MOODNAMES[state.lele - 1] : 'neutral'
+    };
+    var k = kind();
+    g.globalAlpha = 1;
+    if (k === 'wait') drawWait(t, state, m);
+    else if (k === 'rain') drawRain(t, state, m);
+    else if (k === 'cloudy') drawCloudy(t, state, m);
+    else if (k === 'garden') drawGarden(t, state, m);
+    else if (k === 'river') drawRiver(t, state, m);
+    else if (k === 'poppies') drawPoppies(t, state, m);
+    else if (k === 'sun') drawSun(t, state, m);
+    else drawComfort(t, state, m);
+  }
+
+  var TEXTS = {
+    rain: ['Grosse pluie ce matin', 'Un seul parapluie pour deux. On traverse ça ensemble.'],
+    cloudy: ['Ciel couvert, café en main', 'Une matinée tranquille, sans grand éclat ni grande tempête.'],
+    garden: ['Lecture au jardin', "Un livre, un banc à l'ombre et des coquelicots. Rien ne presse."],
+    river: ['Au bord de l\'eau', 'Les voiliers glissent doucement, la matinée est douce.'],
+    poppies: ['Champ de coquelicots', 'Une promenade au soleil, ombrelle à la main.'],
+    sun: ['Grand soleil sur le bureau', "Ça danse, tout est permis aujourd'hui."]
+  };
+
+  var pipsEl = document.getElementById('pips'), PIPCOL = ['#5b4ac0', '#7a6bd0', '#a77bcf', '#e08aaa', '#f08a5a', '#f5b33c', '#ffd34e'];
+  for (var pi = 0; pi < 7; pi++) { var d = document.createElement('div'); d.className = 'pip'; pipsEl.appendChild(d); }
+
+  function readout() {
+    var k = kind(), title, cap, level = 0;
+    if (k === 'wait') {
+      title = "Qui s'est levé du bon pied ?";
+      if (!state.bilge && !state.lele) cap = 'Bilge et Lélé, choisissez chacun votre humeur du matin.';
+      else cap = state.bilge ? "Au tour de Lélé." : "Au tour de Bilge.";
+    } else if (k === 'comfort') {
+      var sadW = state.bilge === 1 ? 'bilge' : 'lele', hapW = sadW === 'bilge' ? 'lele' : 'bilge';
+      title = NAMES[sadW] + " a besoin d'un câlin";
+      cap = NAMES[hapW] + ' arrive avec le soleil et une épaule.';
+      level = state.bilge + state.lele - 1;
+    } else {
+      title = TEXTS[k][0]; cap = TEXTS[k][1]; level = state.bilge + state.lele - 1;
+    }
+    document.getElementById('title').textContent = title;
+    document.getElementById('caption').textContent = cap;
+    document.getElementById('gaugeval').textContent = level ? level + '/7' : '–';
+    for (var i = 0; i < 7; i++) {
+      var p = pipsEl.children[i];
+      p.style.background = i < level ? PIPCOL[i] : '';
+      p.style.borderColor = i < level ? '#e8cdea' : '';
+    }
+  }
+
+  /* ---------- sélecteurs ---------- */
+  var reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  var t0 = performance.now(), last = -1;
+  function now() { return reduce ? 0 : (performance.now() - t0) / 1000; }
+
+  var LABELS = ['Pas top', 'Bof', 'Bien', 'Au top'];
+  var pickers = document.getElementById('pickers');
+  var buttons = { bilge: [], lele: [] };
+  ['bilge', 'lele'].forEach(function (who) {
+    var box = document.createElement('div'); box.className = 'who';
+    var h = document.createElement('h3'); h.textContent = NAMES[who] + ', ton humeur ce matin ?'; box.appendChild(h);
+    var row = document.createElement('div'); row.className = 'moods'; box.appendChild(row);
+    for (var v = 1; v <= 4; v++) (function (v) {
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'mood';
+      b.setAttribute('aria-pressed', 'false'); b.setAttribute('aria-label', NAMES[who] + ' : ' + LABELS[v - 1]);
+      var cv = document.createElement('canvas'); cv.width = 16; cv.height = 18; cv.setAttribute('aria-hidden', 'true');
+      head(cv.getContext('2d'), who, MOODNAMES[v - 1], 0, 0, true);
+      var sp = document.createElement('span'); sp.textContent = LABELS[v - 1];
+      b.appendChild(cv); b.appendChild(sp);
+      b.addEventListener('click', function () { state[who] = v; save(); sync(); });
+      row.appendChild(b); buttons[who].push(b);
+    })(v);
+    pickers.appendChild(box);
+  });
+
+  function sync() {
+    ['bilge', 'lele'].forEach(function (who) {
+      buttons[who].forEach(function (b, i) { b.setAttribute('aria-pressed', state[who] === i + 1 ? 'true' : 'false'); });
+    });
+    readout(); draw(now()); renderStats();
+  }
+  /* ---------- dates et historique ---------- */
+  var KEY = 'barometre-bonheur-v1', days = {}, cur, vm;
+  var MOODWORD = ['Pas top', 'Bof', 'Bien', 'Au top'];
+  var KINDINFO = {
+    rain: ['Pluie', '#5b4a8c'], cloudy: ['Nuageux', '#a77bcf'], garden: ['Jardin', '#4f9a5a'], river: ["Bord de l'eau", '#3f78c8'],
+    poppies: ['Coquelicots', '#e8584a'], sun: ['Grand soleil', '#ffd34e'], comfort: ['Câlin', '#f06ea0']
+  };
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function ymd(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  function parseKey(k) { var q = k.split('-'); return new Date(+q[0], +q[1] - 1, +q[2]); }
+  var todayKey = ymd(new Date());
+  try { var raw = localStorage.getItem(KEY); if (raw) days = JSON.parse(raw) || {}; } catch (e) { days = {}; }
+  function persist() { try { localStorage.setItem(KEY, JSON.stringify(days)); } catch (e) {} }
+  function save() {
+    if (state.bilge || state.lele) days[cur] = [state.bilge, state.lele]; else delete days[cur];
+    persist();
+  }
+  function fmt(d, o) { try { return d.toLocaleDateString('fr-CH', o); } catch (e) { return ymd(d); } }
+  var elInput = document.getElementById('dayinput'), elNext = document.getElementById('dnext'), elToday = document.getElementById('dtoday');
+  elInput.max = todayKey;
+  function dayUI() {
+    var d = parseKey(cur), o = { weekday: 'long', day: 'numeric', month: 'long' };
+    if (d.getFullYear() !== new Date().getFullYear()) o.year = 'numeric';
+    document.getElementById('daytext').textContent = fmt(d, o);
+    elInput.value = cur; elNext.disabled = cur >= todayKey; elToday.hidden = cur === todayKey;
+  }
+  function setDay(k) {
+    if (!k || k > todayKey) return;
+    cur = k; var e = days[k];
+    state.bilge = e ? e[0] : 0; state.lele = e ? e[1] : 0;
+    var d = parseKey(k); vm = { y: d.getFullYear(), m: d.getMonth() };
+    dayUI(); sync();
+  }
+  function shiftDay(n) { var d = parseKey(cur); d.setDate(d.getDate() + n); setDay(ymd(d)); }
+  document.getElementById('dprev').addEventListener('click', function () { shiftDay(-1); });
+  elNext.addEventListener('click', function () { shiftDay(1); });
+  elToday.addEventListener('click', function () { setDay(todayKey); });
+  elInput.addEventListener('change', function () { setDay(elInput.value); });
+  var nowD = new Date(), maxVm = nowD.getFullYear() * 12 + nowD.getMonth();
+  function shiftMonth(n) {
+    var idx = vm.y * 12 + vm.m + n; if (idx > maxVm) return;
+    vm = { y: Math.floor(idx / 12), m: idx % 12 }; renderStats();
+  }
+  document.getElementById('mprev').addEventListener('click', function () { shiftMonth(-1); });
+  document.getElementById('mnext').addEventListener('click', function () { shiftMonth(1); });
+
+  /* ---------- statistiques ---------- */
+  function hasReal() { for (var k in days) if (days[k][0] && days[k][1]) return true; return false; }
+  function sampleMonth(y, m) {
+    var out = {}, dim = new Date(y, m + 1, 0).getDate(), last = (y === nowD.getFullYear() && m === nowD.getMonth()) ? nowD.getDate() : dim;
+    for (var d = 1; d <= last; d++) {
+      if (rnd(d * 5 + m * 17 + 3) > 0.86) continue;
+      var vb = Math.max(1, Math.min(4, Math.round(2.7 + Math.sin(d * 0.6 + m) * 1.1 + (rnd(d + m * 31) - 0.5) * 1.4)));
+      var vl = Math.max(1, Math.min(4, Math.round(2.6 + Math.sin(d * 0.6 + m + 1.2) * 1.1 + (rnd(d * 2 + m * 13) - 0.5) * 1.4)));
+      out[y + '-' + pad(m + 1) + '-' + pad(d)] = [vb, vl];
+    }
+    return out;
+  }
+  function el(id) { return document.getElementById(id); }
+  function renderStats() {
+    if (!vm) return;
+    var y = vm.y, m = vm.m, dim = new Date(y, m + 1, 0).getDate(), real = hasReal();
+    var src = days, list = [], d, e, k;
+    for (d = 1; d <= dim; d++) { k = y + '-' + pad(m + 1) + '-' + pad(d); e = src[k]; list.push(e && e[0] && e[1] ? { d: d, b: e[0], l: e[1], kind: kindFor(e[0], e[1]) } : null); }
+    var rows = list.filter(Boolean), n = rows.length;
+    el('monthlabel').textContent = fmt(new Date(y, m, 1), { month: 'long', year: 'numeric' });
+    el('mnext').disabled = (y * 12 + m) >= maxVm;
+    var note = el('statnote');
+    { note.className = 'note'; note.textContent = "Les réponses sont gardées sur cet appareil. Le partage entre vos deux appareils viendra avec le serveur commun."; }
+
+    var sb = 0, sl = 0, i;
+    for (i = 0; i < n; i++) { sb += rows[i].b; sl += rows[i].l; }
+    var ab = n ? sb / n : 0, al = n ? sl / n : 0;
+    function tile(color, label, val, sub) { return '<div class="tile"><span class="k">' + (color ? '<span class="sw" style="background:' + color + '"></span>' : '') + label + '</span><span class="v">' + val + '</span><span class="s">' + sub + '</span></div>'; }
+    el('tiles').innerHTML =
+      tile('var(--bilge)', 'Bilge', n ? ab.toFixed(1) + '/4' : '–', n ? MOODWORD[Math.round(ab) - 1] + ' en moyenne' : 'Pas encore de réponse') +
+      tile('var(--lele)', 'Lélé', n ? al.toFixed(1) + '/4' : '–', n ? MOODWORD[Math.round(al) - 1] + ' en moyenne' : 'Pas encore de réponse') +
+      tile('', 'Jours à deux', String(n), n === 1 ? 'réponse complète' : 'réponses complètes');
+
+    // graphique
+    var L = 58, T = 12, PW = 452, PH = 130, svg = '', v, X = function (day) { return dim > 1 ? L + (day - 1) / (dim - 1) * PW : L + PW / 2; }, Y = function (val) { return T + (4 - val) / 3 * PH; };
+    for (v = 1; v <= 4; v++) svg += '<line class="grid" x1="' + L + '" x2="' + (L + PW) + '" y1="' + Y(v) + '" y2="' + Y(v) + '"/><text x="' + (L - 8) + '" y="' + (Y(v) + 4) + '" text-anchor="end">' + MOODWORD[v - 1] + '</text>';
+    var ticks = [1, 5, 10, 15, 20, 25, dim];
+    for (i = 0; i < ticks.length; i++) { if (ticks[i] > dim || (i === ticks.length - 1 && dim - ticks[i - 1] < 3)) continue; svg += '<text x="' + X(ticks[i]) + '" y="' + (T + PH + 20) + '" text-anchor="middle">' + ticks[i] + '</text>'; }
+    [['b', 'var(--bilge)', -2], ['l', 'var(--lele)', 2]].forEach(function (sr) {
+      var seg = [], j, r, pts = '';
+      function flush() { if (seg.length > 1) svg += '<polyline fill="none" stroke="' + sr[1] + '" stroke-width="2" points="' + seg.join(' ') + '"/>'; seg = []; }
+      for (j = 0; j < dim; j++) { r = list[j]; if (!r) { flush(); continue; } seg.push((X(r.d) + sr[2]) + ',' + Y(r[sr[0]])); }
+      flush();
+      for (j = 0; j < dim; j++) { r = list[j]; if (r) svg += '<rect x="' + (X(r.d) + sr[2] - 3) + '" y="' + (Y(r[sr[0]]) - 3) + '" width="6" height="6" fill="' + sr[1] + '"/>'; }
+    });
+    el('chart').innerHTML = svg;
+    var lg = '<span><i class="sw" style="background:var(--bilge)"></i>Bilge</span><span><i class="sw" style="background:var(--lele)"></i>Lélé</span>';
+    el('legend').innerHTML = lg;
+
+    // phrases
+    var f = [];
+    if (!n) f.push("Pas encore de réponse à deux ce mois-ci. Choisissez chacun une humeur pour voir la courbe apparaître.");
+    else {
+      var diff = ab - al;
+      f.push(Math.abs(diff) < 0.05 ? "Égalité parfaite ce mois-ci : <b>aucune des deux n'a le dessus</b>." : "<b>" + (diff > 0 ? 'Bilge' : 'Lélé') + "</b> a eu la meilleure humeur du mois, avec " + Math.abs(diff).toFixed(1) + " point d'avance.");
+      var same = 0, comfort = 0, best = rows[0], streak = 0, run = 0, prev = -9;
+      for (i = 0; i < n; i++) {
+        if (rows[i].b === rows[i].l) same++;
+        if (rows[i].kind === 'comfort') comfort++;
+        if (rows[i].b + rows[i].l > best.b + best.l) best = rows[i];
+        if (rows[i].b + rows[i].l >= 5) { run = (rows[i].d === prev + 1) ? run + 1 : 1; prev = rows[i].d; if (run > streak) streak = run; } else { run = 0; prev = -9; }
+      }
+      f.push("Vous avez eu <b>la même humeur " + same + " jour" + (same > 1 ? 's' : '') + "</b> sur " + n + ".");
+      if (comfort) f.push("<b>" + comfort + " jour" + (comfort > 1 ? 's' : '') + " de câlin</b> : l'une avait besoin de l'autre.");
+      f.push("Meilleur jour : le <b>" + best.d + " " + fmt(new Date(y, m, 1), { month: 'long' }) + "</b> (" + KINDINFO[best.kind][0].toLowerCase() + ").");
+      if (streak >= 2) f.push("Série de beau temps à deux : <b>" + streak + " jours de suite</b>.");
+    }
+    el('facts').innerHTML = f.map(function (t) { return '<li>' + t + '</li>'; }).join('');
+  }
+
+  setDay(todayKey);
+  if (!reduce) {
+    (function frame() {
+      var f = Math.floor(now() * 10);
+      if (f !== last) { last = f; draw(now()); }
+      requestAnimationFrame(frame);
+    })();
+  }
+})();
+</script>
+</body>
+</html>
