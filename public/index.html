@@ -248,6 +248,48 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
     head(g, who, mood, x, y, false);
   }
 
+  /* ---------- animation des personnages ---------- */
+  function line(x0, y0, x1, y1, col) {
+    var n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0), 1), i;
+    for (i = 0; i <= n; i++) R(g, x0 + (x1 - x0) * i / n, y0 + (y1 - y0) * i / n, 1, 1, col);
+  }
+  function thick(x0, y0, x1, y1, col) {
+    var n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0), 1), i;
+    for (i = 0; i <= n; i++) R(g, x0 + (x1 - x0) * i / n - 1, y0 + (y1 - y0) * i / n - 1, 2, 2, col);
+  }
+  function armTo(x, y, side, hand, k) {
+    var sx = side === 'L' ? x + 2 : x + 13, sy = y + 16, ex = sx + hand[0], ey = sy + hand[1];
+    thick(sx, sy, ex, ey, k.top); R(g, ex - 1, ey - 1, 2, 2, k.skin);
+    return [Math.round(ex), Math.round(ey)];
+  }
+  function legsFor(x, y, mode, ph, k) {
+    var bx = x + 3, by = y + 14, sn = Math.sin(ph * Math.PI * 2), lf = 0, rt = 0, dl = 0, dr = 0, a, b2;
+    if (mode === 'hide') return;
+    if (mode === 'dangle') {
+      a = Math.round(sn * 2); b2 = Math.round(-sn * 2);
+      R(g, bx + 1, by + 9, 3, 7 + a, k.pants); R(g, bx + 6, by + 9, 3, 7 + b2, k.pants);
+      R(g, bx, by + 16 + a, 4, 2, '#1d1120'); R(g, bx + 6, by + 16 + b2, 4, 2, '#1d1120');
+      return;
+    }
+    if (mode === 'walk') { lf = Math.round(2 * Math.max(0, sn)); rt = Math.round(2 * Math.max(0, -sn)); dl = sn > 0.3 ? -1 : 0; dr = sn < -0.3 ? 1 : 0; }
+    R(g, bx + 1 + dl, by + 9, 3, 6 - lf, k.pants); R(g, bx + 6 + dr, by + 9, 3, 6 - rt, k.pants);
+    R(g, bx + dl, by + 15 - lf, 4, 2, '#1d1120'); R(g, bx + 6 + dr, by + 15 - rt, 4, 2, '#1d1120');
+  }
+  // pose : { bob, lean, legs: 'stand'|'walk'|'dangle'|'hide', ph, L, R } ; L et R = [dx, dy] depuis l'épaule, ou 'none'
+  function actor(who, x, y, mood, pose) {
+    pose = pose || {};
+    var k = colors(who), hand = {}; y += pose.bob || 0;
+    legsFor(x, y, pose.legs || 'stand', pose.ph || 0, k);
+    R(g, x + 3, y + 14, 10, 9, k.top);
+    ['L', 'R'].forEach(function (sd) {
+      var a = pose[sd];
+      if (Array.isArray(a)) hand[sd] = armTo(x, y, sd, a, k);
+      else if (a !== 'none') hand[sd] = armTo(x, y, sd, [sd === 'L' ? -1 : 1, 9], k);
+    });
+    head(g, who, mood, x + (pose.lean || 0), y, false);
+    return hand;
+  }
+
   /* ---------- décor ---------- */
   function sky(b) { for (var i = 0; i < b.length; i++) { var y0 = i === 0 ? -DY : b[i][1]; R(g, -DX, y0, W, b[i][2] - y0, b[i][0]); } }
   function ground(y, col, edge) { R(g, -DX, y, W, 108 - y, col); R(g, -DX, y, W, 2, edge); }
@@ -321,12 +363,10 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
       }
     }
   }
-  function trees(p) {
-    roundTree(-42, 95, 46, p); pine(-24, 95, 36, p); roundTree(-8, 94, 30, p);
-    pine(200, 95, 34, p); roundTree(218, 95, 42, p); pine(236, 95, 38, p);
-    roundTree(14, 95, 40, p); pine(34, 95, 34, p);
-    pine(56, 93, 22, p); pine(140, 93, 22, p);
-    roundTree(158, 95, 36, p); roundTree(180, 95, 44, p);
+  function wrapx(x) { var L = W + 60; return (((x + DX + 30) % L) + L) % L - DX - 30; }
+  function trees(p, ox) {
+    var T = [[0, -42, 95, 46], [1, -24, 95, 36], [0, -8, 94, 30], [1, 200, 95, 34], [0, 218, 95, 42], [1, 236, 95, 38], [0, 14, 95, 40], [1, 34, 95, 34], [1, 56, 93, 22], [1, 140, 93, 22], [0, 158, 95, 36], [0, 180, 95, 44]], i, q, x;
+    for (i = 0; i < T.length; i++) { q = T[i]; x = wrapx(q[1] + (ox || 0)); if (q[0]) pine(x, q[2], q[3], p); else roundTree(x, q[2], q[3], p); }
   }
   var PAL = {
     sun: { t: '#7a4a30', l: '#4fae5c', h: '#8ee07a', p: '#3f9a62' },
@@ -410,10 +450,11 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
     cloud(drift(t, 240, 2.5), -20, 1.1, '#e8cdea', '#a77bcf'); cloud(drift(t, 60, 1.5), -38, 1.3, '#e8cdea', '#a77bcf');
     ground(90, '#3a2243', '#6b2a4f');
     trees(PAL.night); fireflies(t, 26);
-    person('bilge', 70, HY, m.bilge, 'down', 'down');
-    person('lele', 106, HY, m.lele, 'down', 'down');
-    if (!s.bilge) bubble(75, HY - 16);
-    if (!s.lele) bubble(111, HY - 16);
+    var br = Math.floor(t * 1.6);
+    actor('bilge', 70, HY + (br % 2), m.bilge, {});
+    actor('lele', 106, HY + ((br + 1) % 2), m.lele, { lean: (Math.floor(t * 0.7) % 3) - 1 });
+    if (!s.bilge) bubble(75, HY - 16 - (Math.floor(t * 2) % 2));
+    if (!s.lele) bubble(111, HY - 16 - (Math.floor(t * 2 + 1) % 2));
   }
 
   function drawRain(t, s, m, storm) {
@@ -424,9 +465,13 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
     mountain(160, 46, 90, 40, '#241628', '#6b2a4f', null);
     for (var i = 0; i < 11; i++) cloud(drift(t, i * 30, 5 + (i % 3) * 2), -36 + (i % 6) * 12, 1.4, '#5a4268', '#463354');
     ground(90, '#2b1a2e', '#4a2f58');
-    trees(PAL.rain);
-    R(g, 38, 99, 30, 3, '#5b4a8c'); R(g, 124, 101, 36, 3, '#5b4a8c');
-    if (Math.floor(t * 2) % 2) { R(g, 46, 99, 4, 1, '#a89ae0'); R(g, 140, 101, 4, 1, '#a89ae0'); }
+    var wsp = storm ? 2.2 : 1.5;
+    trees(PAL.rain, -t * wsp * 12);
+    [[238, 99, 30], [324, 101, 36], [405, 100, 26]].forEach(function (q) {
+      var px = drift(t, q[0], -wsp * 14);
+      R(g, px, q[1], q[2], 3, '#5b4a8c');
+      if (Math.floor(t * 2 + q[0]) % 2) R(g, px + 8, q[1], 4, 1, '#a89ae0');
+    });
     rain(t, 210, -DX, W - DX, -DY, 94, function (x, y) { return Math.abs(x - 93) <= 26 && y >= 47; });
     if (storm) {
       g.globalAlpha = 0.28; R(g, -DX, -DY, W, 108 + DY, '#0c0614'); g.globalAlpha = 1;
@@ -438,17 +483,15 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
         for (k2 = 0; k2 < 16; k2++) { R(g, bx, by0 + k2 * 5, 3, 6, '#fff6c0'); bx += Math.round(rnd(cyc * 7 + k2) * 8 - 4); }
       }
     }
-    person('bilge', 70, HY, m.bilge, 'down', 'none');
-    person('lele', 106, HY, m.lele, 'none', 'down');
-    var by = HY + 14;
-    R(g, 93, 59, 1, 28, '#d8c8e8');
-    R(g, 83, by + 2, 10, 2, '#e9a43b'); R(g, 94, by + 2, 11, 2, '#26396b');
-    R(g, 92, by + 1, 3, 4, '#dc9d74');
-    umbrella(93, 47, 26, 12);
+    var wph = t * wsp, ucx = 93 + (storm ? Math.round(Math.sin(t * 4) * 1.5) : 0);
+    actor('bilge', 70, HY + (Math.sin(wph * 6.283) > 0 ? -1 : 0), m.bilge, { legs: 'walk', ph: wph, lean: storm ? 1 : 0, L: [-1, 9], R: [ucx - 83, 0] });
+    actor('lele', 106, HY + (Math.sin((wph + 0.5) * 6.283) > 0 ? -1 : 0), m.lele, { legs: 'walk', ph: wph + 0.5, lean: storm ? -1 : 0, L: [ucx - 108, 0], R: [1, 9] });
+    R(g, ucx, 59, 1, 28, '#d8c8e8');
+    umbrella(ucx, 47, 26, 12);
     if (!storm) {
     // petit oiseau qui s'abrite sur le parapluie
-    R(g, 90, 44, 5, 3, '#6fb1e0'); R(g, 94, 42, 3, 3, '#6fb1e0'); R(g, 97, 43, 1, 1, '#ffd34e'); R(g, 95, 43, 1, 1, '#1d1120'); R(g, 90, 46, 4, 1, '#fff4fb');
-    if (Math.floor(t * 2) % 2) R(g, 89, 45, 1, 2, '#6fb1e0');
+    R(g, ucx - 3, 44, 5, 3, '#6fb1e0'); R(g, ucx + 1, 42, 3, 3, '#6fb1e0'); R(g, ucx + 4, 43, 1, 1, '#ffd34e'); R(g, ucx + 2, 43, 1, 1, '#1d1120'); R(g, ucx - 3, 46, 4, 1, '#fff4fb');
+    if (Math.floor(t * 2) % 2) R(g, ucx - 4, 45, 1, 2, '#6fb1e0');
     }
   }
 
@@ -463,16 +506,13 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
     flock(t, 2, 34, '#4a2f58', 20);
     leaves(t, 12);
     R(g, 56, 72, 80, 3, '#6e4630'); R(g, 56, 72, 3, 18, '#6e4630'); R(g, 133, 72, 3, 18, '#6e4630');
-    person('bilge', 70, HY, m.bilge, 'cup', 'cup');
-    person('lele', 106, HY, m.lele, 'cup', 'cup');
-    var by = HY + 14, xs = [73, 109];
-    for (var k = 0; k < 2; k++) {
-      var bx = xs[k];
-      R(g, bx + 3, by + 3, 4, 4, '#fff6ee'); R(g, bx + 3, by + 3, 4, 1, '#7a4a30'); R(g, bx + 2, by + 5, 6, 2, k ? '#d9a47e' : '#dc9d74');
-      g.globalAlpha = 0.7;
-      for (var j = 0; j < 3; j++) R(g, bx + 3 + j + Math.round(Math.sin(t * 3 + j + k) * 1), by + 2 - ((t * 6 + j * 2) % 5), 1, 2, '#fff6ee');
-      g.globalAlpha = 1;
-    }
+    [['bilge', 70, 'R', 0], ['lele', 106, 'L', 0.5]].forEach(function (c) {
+      var u = (t * 0.28 + c[3]) % 1, sip = u < 0.35 ? Math.sin(u / 0.35 * Math.PI) : 0, sd = c[2] === 'R' ? 1 : -1, pose = { legs: 'hide' };
+      pose[c[2]] = [-sd * (2 + sip), 7 - sip * 11];
+      var h = actor(c[0], c[1], HY, m[c[0]], pose)[c[2]];
+      R(g, h[0] - 2, h[1] - 3, 4, 4, '#fff6ee'); R(g, h[0] - 2, h[1] - 3, 4, 1, '#7a4a30');
+      if (!sip) { g.globalAlpha = 0.7; for (var j = 0; j < 3; j++) R(g, h[0] - 1 + j + Math.round(Math.sin(t * 3 + j + c[3] * 5)), h[1] - 6 - ((t * 6 + j * 2) % 5), 1, 2, '#fff6ee'); g.globalAlpha = 1; }
+    });
     R(g, 54, 85, 84, 3, '#8a5a3a'); R(g, 54, 85, 84, 1, '#a87648'); R(g, 58, 88, 3, 9, '#6e4630'); R(g, 131, 88, 3, 9, '#6e4630');
   }
 
@@ -492,13 +532,19 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
     flock(t, 6, -14, '#5a1f4e', 5);
     for (var i = 0; i < 34; i++) R(g, rnd(i + 11) * W - DX, 92 + rnd(i + 31) * 14, 2, 2, ['#ff7aa8', '#ffd34e', '#fff4fb'][i % 3]);
     butterflies(t, 5);
-    var p = Math.floor(t * 4) % 2;
-    person('bilge', 70, HY + (p === 0 ? -2 : 0), m.bilge, p === 0 ? 'up' : 'down', p === 0 ? 'down' : 'up');
-    person('lele', 106, HY + (p === 0 ? 0 : -2), m.lele, p === 0 ? 'down' : 'up', p === 0 ? 'up' : 'down');
-    for (var k = 0; k < 3; k++) {
-      var nx = 48 + k * 46, ny = 62 - ((t * 14 + k * 17) % 40);
-      R(g, nx, ny, 2, 2, '#fff4fb'); R(g, nx + 1, ny - 4, 1, 4, '#fff4fb');
+    var dd = Math.floor(t * 4.4), k;
+    [['bilge', 70, 0], ['lele', 106, 1]].forEach(function (c) {
+      var f = (dd + c[2]) % 2;
+      actor(c[0], c[1], HY + (f ? -2 : 0), m[c[0]], { legs: 'walk', ph: t * 2.2 + c[2] * 0.5, lean: f ? 1 : -1, L: f ? [-4, -13] : [-1, 9], R: f ? [1, 9] : [4, -13] });
+    });
+    var NOTE = ['#fff4fb', '#ffd34e', '#ff5d8f'];
+    for (k = 0; k < 8; k++) {
+      var nx = (k % 2 ? 114 : 78) + 6 + Math.sin(t * 2 + k) * 6, rise = (t * 14 + k * 11) % 44, ny = HY - 6 - rise;
+      g.globalAlpha = 1 - Math.max(0, (rise - 24) / 20);
+      R(g, nx, ny, 3, 2, NOTE[k % 3]); R(g, nx + 2, ny - 5, 1, 5, NOTE[k % 3]); R(g, nx + 2, ny - 5, 3, 1, NOTE[k % 3]);
     }
+    g.globalAlpha = 1;
+    for (k = 0; k < 40; k++) R(g, -DX + rnd(k + 400) * W + Math.sin(t + k) * 3, ((t * 22 + rnd(k + 440) * 162) % 162) - DY, 2, 1, ['#ff7aa8', '#ffd34e', '#fff4fb', '#7ac8f0'][k % 4]);
   }
 
   function drawComfort(t, s, m) {
@@ -520,13 +566,15 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
     butterflies(t, 4);
     cloud(cx - 15, 28, 1.1, '#5a4268', '#463354');
     rain(t, 26, cx - 16, cx + 16, 50, 94, null);
-    var hk = colors(happyWho), by = HY + 14;
-    var hb = Math.floor(t * 3) % 2 ? -1 : 0;
-    var farSide = happyX < sadX ? 'L' : 'R';
-    person(sadWho, sadX, HY + 1, MOODNAMES[(sadIsBilge ? s.bilge : s.lele) - 1], 'down', 'down');
-    person(happyWho, happyX, HY + hb, MOODNAMES[(sadIsBilge ? s.lele : s.bilge) - 1], farSide === 'L' ? 'up' : 'none', farSide === 'R' ? 'up' : 'none');
-    if (happyX < sadX) { R(g, 83, by + 1, 17, 2, hk.top); R(g, 98, by, 3, 3, hk.skin); }
-    else { R(g, 80, by + 1, 17, 2, hk.top); R(g, 79, by, 3, 3, hk.skin); }
+    var sadMood = MOODNAMES[(sadIsBilge ? s.bilge : s.lele) - 1], happyMood = MOODNAMES[(sadIsBilge ? s.lele : s.bilge) - 1];
+    var dir = happyX < sadX ? 1 : -1, pat = Math.round(Math.sin(t * 5) * 1.5), wipe = (t % 5) < 1.4, farS = dir === 1 ? 'R' : 'L';
+    var wx = (farS === 'R' ? -3 : 3) + Math.round(Math.sin(t * 9)), sadPose = { bob: Math.floor(t * 3) % 2 };
+    sadPose[farS] = wipe ? [wx, -7] : [farS === 'R' ? 1 : -1, 9];
+    actor(sadWho, sadX, HY + 1, sadMood, sadPose);
+    var near = dir === 1 ? 'R' : 'L', tx = dir === 1 ? sadX + 2 : sadX + 13, sx0 = dir === 1 ? happyX + 13 : happyX + 2;
+    var happyPose = { bob: Math.floor(t * 3) % 2 ? -1 : 0, lean: dir * 2 };
+    happyPose[near] = [tx - sx0, -1 + pat];
+    actor(happyWho, happyX, HY, happyMood, happyPose);
     var hx = happyX + 5;
     g.globalAlpha = 0.9;
     heart(hx - 6, HY - 8 - ((t * 9) % 18), '#ff5d8f');
@@ -557,10 +605,16 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
     R(g, 168, 96, 9, 6, '#8aa0c8'); R(g, 166, 93, 3, 5, '#8aa0c8'); R(g, 176, 94, 2, 6, '#6a80a8');
     R(g, 54, 72, 84, 10, '#2f6f4a'); R(g, 54, 75, 84, 1, '#1f4f36'); R(g, 54, 78, 84, 1, '#1f4f36');
     R(g, 54, 72, 2, 18, '#1d1120'); R(g, 136, 72, 2, 18, '#1d1120');
-    person('bilge', 70, HY, m.bilge, 'cup', 'cup');
-    person('lele', 106, HY, m.lele, 'cup', 'cup');
-    var by = HY + 14, xs = [73, 109];
-    for (k = 0; k < 2; k++) { R(g, xs[k] + 1, by + 3, 8, 5, '#fff6ee'); R(g, xs[k] + 5, by + 3, 1, 5, '#c4a090'); R(g, xs[k] + 1, by + 7, 8, 1, '#a8336f'); }
+    [['bilge', 70, 0], ['lele', 106, 2.2]].forEach(function (c) {
+      var x = c[1], y = HY, fp = ((t + c[2]) % 4.5) / 0.7;
+      actor(c[0], x, y, m[c[0]], { legs: 'hide', L: [1, 4], R: [-1, 4], bob: ((t + c[2]) % 3) < 0.25 ? 1 : 0 });
+      R(g, x + 3, y + 17, 10, 6, '#a8336f'); R(g, x + 4, y + 17, 8, 5, '#fff6ee'); R(g, x + 8, y + 17, 1, 5, '#c4a090');
+      R(g, x + 5, y + 18, 3, 1, '#c4a090'); R(g, x + 5, y + 20, 2, 1, '#c4a090'); R(g, x + 10, y + 18, 2, 1, '#c4a090'); R(g, x + 10, y + 20, 2, 1, '#c4a090');
+      if (fp < 1) {
+        var pw = Math.round(Math.abs(Math.cos(fp * Math.PI)) * 4) + 1, up = Math.round(Math.sin(fp * Math.PI) * 3), px = fp < 0.5 ? x + 8 : x + 8 - pw;
+        R(g, px, y + 16 - up, pw, 5, '#fff6ee'); R(g, px, y + 16 - up, pw, 1, '#c4a090');
+      }
+    });
     R(g, 54, 85, 84, 3, '#3d8a5c'); R(g, 54, 85, 84, 1, '#5fae78'); R(g, 58, 88, 3, 8, '#1d1120'); R(g, 131, 88, 3, 8, '#1d1120');
     butterflies(t, 4); flock(t, 2, -10, '#4a3a6a', 30);
   }
@@ -571,25 +625,43 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
     cloud(drift(t, 20, 3), -18, 1.4, '#f4f7fb', '#d4e0f0'); cloud(drift(t, 140, 2), -36, 1.2, '#f4f7fb', '#d4e0f0');
     cloud(drift(t, 230, 3.5), 4, 1.0, '#f4f7fb', '#d4e0f0'); cloud(drift(t, 80, 2.5), -4, 0.9, '#f4f7fb', '#d4e0f0');
     R(g, -DX, 52, W, 10, '#4f8a5a');
-    for (k = -3; k < 14; k++) foliage(-44 + k * 22 + rnd(k + 3) * 6, 52 + rnd(k + 8) * 3, 14, 9, ['#2f6a44', '#4f9a5a', '#7ac07a'], k * 5);
+    for (k = -3; k < 14; k++) foliage(((k * 22 + rnd(k + 3) * 6 - t * 2.5) % 374 + 374) % 374 - 44, 52 + rnd(k + 8) * 3, 14, 9, ['#2f6a44', '#4f9a5a', '#7ac07a'], k * 5);
     R(g, 60, 57, 34, 4, '#d8e4f0'); R(g, 60, 60, 34, 1, '#a8b8d0'); R(g, 150, 56, 26, 4, '#c8d8e8');
     R(g, -DX, 60, W, 8, '#5a92d8'); R(g, -DX, 68, W, 12, '#3f78c8'); R(g, -DX, 80, W, 12, '#2f64b0');
     for (k = 0; k < 110; k++) {
-      var sx = ((rnd(k + 1) * W + t * (rnd(k + 9) * 4 - 2)) % W + W) % W - DX, sy = 62 + rnd(k + 3) * 27, len = 3 + Math.floor(rnd(k + 6) * 6);
+      var sx = ((rnd(k + 1) * W - t * (10 + rnd(k + 9) * 14)) % W + W) % W - DX, sy = 62 + rnd(k + 3) * 27, len = 3 + Math.floor(rnd(k + 6) * 6);
       var cc = k % 3 === 0 ? '#a8d4f0' : (k % 3 === 1 ? '#2a5aa8' : '#fff4fb');
       if (cc === '#fff4fb' && Math.sin(t * 3 + k) < 0.3) continue;
       R(g, sx, sy, len, 1, cc);
     }
-    boat(140 + Math.round(Math.sin(t * 0.3) * 3), 78 + Math.round(Math.sin(t * 0.8)), 0);
-    boat(-22 + Math.round(Math.sin(t * 0.25 + 1) * 3), 74 + Math.round(Math.sin(t * 0.7 + 2)), 0);
-    boat(212 + Math.round(Math.sin(t * 0.3 + 2) * 3), 72 + Math.round(Math.sin(t * 0.9)), 0);
+    boat(190 + Math.round(Math.sin(t * 0.3) * 3), 72 + Math.round(Math.sin(t * 0.8)), 0);
+    boat(-22 + Math.round(Math.sin(t * 0.25 + 1) * 3), 70 + Math.round(Math.sin(t * 0.7 + 2)), 0);
+    boat(240 + Math.round(Math.sin(t * 0.3 + 2) * 3), 69 + Math.round(Math.sin(t * 0.9)), 0);
     ground(90, '#5f9a46', '#85bc5a');
     speckle(-DX, 92, W, 16, ['#4f8a3a', '#7ab050', '#9acd6a'], 9, 0.45);
     var reeds = [30, 36, 168, 176, 222];
     for (i = 0; i < reeds.length; i++) { R(g, reeds[i], 80, 1, 14, '#2f6a44'); R(g, reeds[i] + 1, 84, 1, 10, '#4f9a5a'); }
     for (k = 0; k < 24; k++) { var py = 93 + rnd(k + 3) * 12; poppy(-DX + rnd(k + 4) * W, py, py > 100); }
-    person('bilge', 70, HY, m.bilge, 'down', 'down');
-    person('lele', 106, HY, m.lele, 'down', Math.floor(t) % 2 ? 'up' : 'down');
+    var hy = 79 + Math.round(Math.sin(t * 1.5) * 1.2), phi = t * 3.4, cs = Math.cos(phi), sn = Math.sin(phi), BC = 96, oarcol = '#c8965a';
+    var info = [['bilge', 70, 'L', 58, -1], ['lele', 106, 'R', 134, 1]].map(function (r) {
+      var o = { legs: 'hide' }, dir = r[4];
+      o[r[2]] = [dir * (6 - 5 * cs), 2 + 3 * sn]; o[r[2] === 'L' ? 'R' : 'L'] = 'none';
+      return { hand: actor(r[0], r[1], hy - 22, m[r[0]], o)[r[2]], lock: [r[3], hy - 1] };
+    });
+    for (var rr = 0; rr < 9; rr++) {
+      var hw = Math.round(42 - rr * 1.7 - (rr > 6 ? 2 : 0));
+      R(g, BC - hw, hy + rr, hw * 2, 1, rr === 0 ? '#e0b070' : (rr === 1 ? '#b07a48' : (rr > 6 ? '#5a3a24' : '#8a5a3a')));
+      if (rr > 1 && rr % 3 === 0) R(g, BC - hw + 2, hy + rr, hw * 2 - 4, 1, '#6e4630');
+    }
+    R(g, BC - 45, hy - 4, 4, 5, '#b07a48'); R(g, BC + 41, hy - 7, 4, 8, '#b07a48'); R(g, BC + 43, hy - 8, 3, 2, '#e0b070');
+    info.forEach(function (o) {
+      var px = o.hand[0], py = o.hand[1], lx = o.lock[0], ly = o.lock[1], dx = lx - px, dy = ly - py, ln = Math.sqrt(dx * dx + dy * dy) || 1;
+      var bx2 = lx + dx / ln * 22, by2 = ly + dy / ln * 22;
+      line(px, py, bx2, by2, oarcol); R(g, bx2 - 2, by2 - 1, 5, 3, '#e0b070');
+      if (by2 > hy + 3) { g.globalAlpha = 0.85; R(g, bx2 - 4, by2 + 2, 9, 1, '#fff4fb'); for (var j = 0; j < 3; j++) R(g, bx2 - 3 + j * 3, by2 - 1 - ((t * 18 + j * 5) % 5), 1, 1, '#fff4fb'); g.globalAlpha = 1; }
+    });
+    for (var wk = 0; wk < 6; wk++) R(g, BC - 46 - ((t * 12 + wk * 13) % 70), hy + 7 + (wk % 2), 6 - (wk % 3), 1, wk % 2 ? '#cfe8f8' : '#fff4fb');
+    for (var wl = 0; wl < 5; wl++) R(g, BC - 40 + ((t * 10 + wl * 19) % 84), hy + 8 - (wl % 2), 7, 1, '#a8d4f0');
     flock(t, 3, -6, '#3a4a7a', 7);
   }
 
@@ -609,15 +681,16 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
       if (rnd(x * 0.37 + y * 1.13 + 3) < 0.45) R(g, x, y, 2, 2, GR[Math.floor(rnd(x * 1.7 + y * 0.9 + 9) * GR.length)]);
     }
     for (k = 0; k < 170; k++) {
-      x = -DX + Math.pow(rnd(k + 1), 1.5) * W; top = hillTop(x); y = top + 3 + rnd(k + 2) * (108 - top - 6);
+      x = ((Math.pow(rnd(k + 1), 1.5) * W - t * 14) % W + W) % W - DX; top = hillTop(x); y = top + 3 + rnd(k + 2) * (108 - top - 6);
       poppy(x, y, y > 92);
     }
     var by = HY + 14;
-    person('bilge', 70, HY, m.bilge, 'down', 'none');
-    person('lele', 106, HY, m.lele, Math.floor(t * 2) % 2 ? 'up' : 'down', 'down');
-    R(g, 83, by + 1, 4, 2, '#e9a43b'); R(g, 86, by - 2, 2, 4, '#dc9d74'); R(g, 87, by - 14, 1, 15, '#c8a070');
+    var wph = t * 1.3, wv = (t % 3.2) < 1.6;
+    actor('bilge', 70, HY + (Math.sin(wph * 6.283) > 0 ? -1 : 0), m.bilge, { legs: 'walk', ph: wph, L: [-1, 9], R: [4, -3] });
+    actor('lele', 106, HY + (Math.sin((wph + 0.5) * 6.283) > 0 ? -1 : 0), m.lele, { legs: 'walk', ph: wph + 0.5, L: wv ? [-5 + Math.round(Math.sin(t * 9) * 2), -12] : [-1, 9], R: [1, 9] });
+    R(g, 87, by - 14, 1, 15, '#c8a070');
     umbrella(87, by - 22, 14, 7, '#3b7fd6', '#5a9af0', '#2a5ab0');
-    for (k = 0; k < 16; k++) poppy(-DX + rnd(k + 70) * W, 100 + rnd(k + 80) * 6, true);
+    for (k = 0; k < 16; k++) poppy(((rnd(k + 70) * W - t * 26) % W + W) % W - DX, 100 + rnd(k + 80) * 6, true);
     butterflies(t, 5); flock(t, 3, -8, '#3a4a7a', 40);
   }
 
@@ -665,8 +738,12 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
     var PP = { t: '#3a2420', p: '#2f5a3a', h: '#4f7a4a' };
     pine(200, 93, 30, PP); pine(222, 93, 40, PP); pine(240, 94, 26, PP);
     flock(t, 3, -6, '#2a1a40', 12);
-    person('bilge', 70, HY, m.bilge, 'down', 'down');
-    person('lele', 106, HY, m.lele, 'up', 'down');
+    var sw = t * 0.9;
+    actor('bilge', 44, 69, m.bilge, { legs: 'dangle', ph: sw, lean: 2 });
+    actor('lele', 62, 69, m.lele, { legs: 'dangle', ph: sw + 0.5, lean: -1, L: [-9, 0] });
+    var sp = (t % 7) / 0.9;
+    if (sp < 1) for (i = 0; i < 8; i++) { g.globalAlpha = 1 - i / 8; R(g, 230 - sp * 150 + i * 4, -52 + sp * 62 - i * 1.6, 2, 1, '#fff6c0'); }
+    g.globalAlpha = 1;
   }
 
   function drawMoon(t, s, m) {
@@ -690,8 +767,11 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
     foliage(-40, -44, 42, 20, ['#2f5a2a', '#4a8a32', '#7ab040'], 7); foliage(-14, -32, 28, 12, ['#2f5a2a', '#4a8a32', '#7ab040'], 17);
     for (k = 0; k < 14; k++) R(g, ((rnd(k + 1) * W + t * 6 + Math.sin(t + k) * 5) % W) - DX, 20 + rnd(k + 9) * 60 + Math.sin(t * 0.8 + k) * 6, 2, 1, '#fffdf0');
     flock(t, 2, 12, '#2a4a6a', 3);
-    person('bilge', 70, HY, m.bilge, 'up', 'down');
-    person('lele', 106, HY, m.lele, 'down', 'down');
+    [['bilge', 70, 0], ['lele', 106, 0.3]].forEach(function (c) {
+      var jp = (t * 1.1 + c[2]) % 1, jh = Math.round(Math.abs(Math.sin(jp * Math.PI)) * 6), air = jh > 2;
+      g.globalAlpha = 0.25; R(g, c[1] + 4 + Math.round(jh / 2), 96, 8 - jh, 2, '#2a4a1a'); g.globalAlpha = 1;
+      actor(c[0], c[1], HY - jh, m[c[0]], { legs: 'stand', L: air ? [-6, -12] : [-1, 9], R: air ? [6, -12] : [1, 9] });
+    });
   }
 
   function drawSummer(t, s, m) {
@@ -700,18 +780,23 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
     cloud(drift(t, 20, 2), 52, 0.9, '#f4f7fb', '#b0c8dc'); cloud(drift(t, 230, 2.5), 48, 1.0, '#f4f7fb', '#b0c8dc');
     cumulus(140 + Math.sin(t * 0.15) * 3, 62, 1.2);
     R(g, -DX, 74, W, 6, '#7ab0a8');
-    for (x = -DX; x < W - DX; x += 4) R(g, x, 71 + Math.round(rnd(x + 99) * 3), 3, 6, '#3f8a6a');
+    for (i = 0; i < 75; i++) R(g, -DX + i * 4 - ((t * 3) % 4), 71 + Math.round(rnd(i + Math.floor(t * 3 / 4) + 99) * 3), 3, 6, '#3f8a6a');
     function hill(base, amp, fr, ph, col) { for (var xx = -DX; xx < W - DX; xx += 2) { var hy = Math.round(base + Math.sin(xx * fr + ph) * amp); R(g, xx, hy, 2, 108 - hy, col); } }
-    hill(78, 3, 0.03, 0, '#6cb88a'); hill(84, 3, 0.045, 1, '#4fa070'); hill(90, 2, 0.06, 2, '#3f9060');
-    for (i = 0; i < 90; i++) R(g, -DX + rnd(i + 130) * W, 80 + rnd(i + 170) * 28, 1, 1, i % 3 ? '#ffe070' : '#fffdf0');
+    hill(78, 3, 0.03, t * 3 * 0.03, '#6cb88a'); hill(84, 3, 0.045, 1 + t * 6 * 0.045, '#4fa070'); hill(90, 2, 0.06, 2 + t * 10 * 0.06, '#3f9060');
+    for (i = 0; i < 90; i++) R(g, ((rnd(i + 130) * W - t * 10) % W + W) % W - DX, 80 + rnd(i + 170) * 28, 1, 1, i % 3 ? '#ffe070' : '#fffdf0');
     var TR = { t: '#4a3228', l: '#2a7a3a', h: '#5ab05a' };
-    roundTree(18, 96, 54, TR); roundTree(42, 97, 38, TR); foliage(214, 92, 16, 8, ['#2a7a3a', '#3f9a4a', '#5ab05a'], 5); foliage(238, 94, 12, 6, ['#2a7a3a', '#3f9a4a', '#5ab05a'], 9);
+    roundTree(drift(t, 116, -9), 96, 54, TR); roundTree(drift(t, 140, -9), 97, 38, TR); foliage(drift(t, 312, -9), 92, 16, 8, ['#2a7a3a', '#3f9a4a', '#5ab05a'], 5); foliage(drift(t, 336, -9), 94, 12, 6, ['#2a7a3a', '#3f9a4a', '#5ab05a'], 9);
     R(g, -DX, 98, W, 10, '#4a9a58'); speckle(-DX, 98, W, 10, ['#3f8a4a', '#5ab068', '#7ac878'], 4, 0.5);
-    for (i = 0; i < 40; i++) { x = -DX + rnd(i + 300) * W; y = 98 + rnd(i + 340) * 9; R(g, x, y, 1, 1, ['#ffe070', '#fffdf0', '#3ac8b8'][i % 3]); if (i % 5 === 0) R(g, x, y - 2, 1, 2, '#3ac8b8'); }
+    for (i = 0; i < 40; i++) { x = ((rnd(i + 300) * W - t * 16) % W + W) % W - DX; y = 98 + rnd(i + 340) * 9; R(g, x, y, 1, 1, ['#ffe070', '#fffdf0', '#3ac8b8'][i % 3]); if (i % 5 === 0) R(g, x, y - 2, 1, 2, '#3ac8b8'); }
     bird(drift(t, 100, 5), 28, Math.floor(t * 5) % 2 === 0, '#f4f7fb');
-    var pz = Math.floor(t * 4) % 2;
-    person('bilge', 70, HY + (pz === 0 ? -2 : 0), m.bilge, pz === 0 ? 'up' : 'down', pz === 0 ? 'down' : 'up');
-    person('lele', 106, HY + (pz === 0 ? 0 : -2), m.lele, pz === 0 ? 'down' : 'up', pz === 0 ? 'up' : 'down');
+    var rp = t * 2.4, kx = 176 + Math.sin(t * 0.9) * 8, ky = 14 + Math.sin(t * 1.3) * 3, ch = Math.floor(t * 3) % 2;
+    actor('bilge', 70, HY + (Math.sin(rp * 6.283) > 0 ? -1 : 0), m.bilge, { legs: 'walk', ph: rp, L: ch ? [-5, -12] : [-1, 9], R: ch ? [1, 9] : [5, -12] });
+    var lh = actor('lele', 106, HY + (Math.sin((rp + 0.5) * 6.283) > 0 ? -1 : 0), m.lele, { legs: 'walk', ph: rp + 0.5, lean: 1, R: [9, -11], L: [-1, 9] }).R;
+    var px0 = lh[0], py0 = lh[1], u, ux, uy;
+    for (u = 1; u <= 14; u++) { ux = lh[0] + (kx - lh[0]) * u / 14; uy = lh[1] + (ky + 8 - lh[1]) * u / 14 + Math.sin(u / 14 * Math.PI) * 4; line(px0, py0, ux, uy, '#f4f7fb'); px0 = ux; py0 = uy; }
+    for (i = -6; i <= 6; i++) { var hw2 = Math.max(1, Math.round(6 - Math.abs(i) * 0.9)); R(g, kx - hw2, ky + i, hw2, 1, '#e8584a'); R(g, kx, ky + i, hw2, 1, '#ffd34e'); }
+    R(g, kx, ky - 6, 1, 13, '#fff4fb'); R(g, kx - 6, ky, 12, 1, '#fff4fb');
+    for (i = 0; i < 8; i++) R(g, kx + Math.sin(t * 5 + i * 0.9) * (1 + i * 0.4), ky + 8 + i * 3, 2, 2, i % 2 ? '#fff4fb' : '#ff5d8f');
     butterflies(t, 3);
   }
 
