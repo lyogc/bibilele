@@ -121,6 +121,21 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
 .inbox { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
 .inbox li { padding-left: 10px; border-left: 3px solid var(--magenta); }
 .stats { background: var(--card); border: 3px solid var(--wine); padding: 16px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.badges, .changelog { background: var(--card); border: 3px solid var(--wine); padding: 16px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.badges h2, .changelog h2 { margin: 0; font-family: var(--font-display); font-weight: 500; font-size: 24px; color: #fff4fb; }
+.badges h3 { margin: 0; font-family: var(--font-display); font-weight: 500; font-size: 18px; color: #fff4fb; display: flex; align-items: baseline; gap: 10px; }
+.badges h3 small { font: 600 12px var(--font-body); color: var(--violet); letter-spacing: .08em; text-transform: uppercase; }
+.bgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 10px; }
+.badge { background: var(--plum); border: 2px solid var(--wine); padding: 10px 8px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; min-width: 0; }
+.badge canvas { width: 56px; height: 56px; image-rendering: pixelated; }
+.badge b { color: #fff4fb; font-size: 14px; line-height: 1.2; }
+.badge span { font-size: 12px; color: var(--violet); line-height: 1.3; }
+.badge.on { border-color: var(--sun); }
+.badge.off canvas { filter: grayscale(1) brightness(.45); }
+.badge.off b { color: var(--violet); }
+.changelog details { border-left: 3px solid var(--magenta); padding-left: 12px; }
+.changelog summary { cursor: pointer; font-weight: 600; color: #fff4fb; }
+.changelog ul { margin: 8px 0 4px; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
 .stats-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
 .stats h2 { margin: 0; font-family: var(--font-display); font-weight: 500; font-size: 24px; color: #fff4fb; }
 .monthnav { display: flex; align-items: center; gap: 8px; }
@@ -215,6 +230,12 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
     <svg class="chart" id="chart" viewBox="0 0 520 170" role="img" aria-label="Humeur de Bilge et de Lélé jour par jour"></svg>
     <div class="legend" id="legend"></div>
     <ul class="facts" id="facts"></ul>
+  </section>
+  <section class="badges" id="badges" aria-label="Badges du mois"></section>
+
+  <section class="changelog" aria-label="Journal des mises à jour">
+    <h2>Journal des mises à jour</h2>
+    <div id="changelog"></div>
   </section>
 </main>
 
@@ -1543,8 +1564,120 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
 
   /* ---------- statistiques ---------- */
   function el(id) { return document.getElementById(id); }
+
+  /* ---------- badges du mois ---------- */
+  function lineC(c, x0, y0, x1, y1, col) { var n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0), 1), i; for (i = 0; i <= n; i++) R(c, x0 + (x1 - x0) * i / n, y0 + (y1 - y0) * i / n, 1, 1, col); }
+  function heartC(c, x, y, col) { var rows = ['.##.##.', '#######', '#######', '.#####.', '..###..', '...#...'], j, i; for (j = 0; j < rows.length; j++) for (i = 0; i < 7; i++) if (rows[j].charAt(i) === '#') R(c, x + i, y + j, 1, 1, col); }
+  function faceBase(c, rim, fill) { disc(c, 8, 8, 7, rim); disc(c, 8, 8, 6, fill); }
+  var ICONS = {
+    joy: function (c) { faceBase(c, '#c98a1e', '#ffd34e'); R(c, 5, 6, 2, 2, '#1d1120'); R(c, 9, 6, 2, 2, '#1d1120'); R(c, 5, 10, 1, 1, '#1d1120'); R(c, 6, 11, 4, 1, '#1d1120'); R(c, 10, 10, 1, 1, '#1d1120'); R(c, 4, 9, 1, 1, '#ff8f8f'); R(c, 11, 9, 1, 1, '#ff8f8f'); R(c, 13, 1, 1, 3, '#fff'); R(c, 12, 2, 3, 1, '#fff'); },
+    sun: function (c) { var a; for (a = 0; a < 8; a++) { var dx = Math.cos(a * 0.785), dy = Math.sin(a * 0.785); lineC(c, 8 + dx * 5.5, 8 + dy * 5.5, 8 + dx * 7.5, 8 + dy * 7.5, '#ffb02e'); } disc(c, 8, 8, 4, '#ffd34e'); R(c, 5, 7, 3, 2, '#1d1120'); R(c, 9, 7, 3, 2, '#1d1120'); R(c, 8, 7, 1, 1, '#1d1120'); R(c, 6, 10, 4, 1, '#c98a1e'); },
+    sad: function (c) { faceBase(c, '#3b5a9a', '#7aa8e8'); R(c, 4, 6, 3, 1, '#1d1120'); R(c, 10, 6, 3, 1, '#1d1120'); R(c, 5, 7, 2, 1, '#1d1120'); R(c, 10, 7, 2, 1, '#1d1120'); R(c, 6, 11, 4, 1, '#1d1120'); R(c, 5, 12, 1, 1, '#1d1120'); R(c, 10, 12, 1, 1, '#1d1120'); R(c, 5, 8, 1, 6, '#e8f4ff'); R(c, 11, 8, 1, 6, '#e8f4ff'); R(c, 2, 15, 12, 1, '#cfe8ff'); },
+    grump: function (c) { faceBase(c, '#8a2a1a', '#e8584a'); R(c, 4, 4, 3, 1, '#1d1120'); R(c, 5, 5, 2, 1, '#1d1120'); R(c, 9, 4, 3, 1, '#1d1120'); R(c, 9, 5, 2, 1, '#1d1120'); R(c, 5, 7, 2, 2, '#1d1120'); R(c, 9, 7, 2, 2, '#1d1120'); R(c, 6, 11, 4, 1, '#1d1120'); R(c, 5, 12, 1, 1, '#1d1120'); R(c, 10, 12, 1, 1, '#1d1120'); R(c, 1, 1, 2, 2, '#fff'); R(c, 13, 1, 2, 2, '#fff'); },
+    zen: function (c) { faceBase(c, '#2f6f4a', '#9be07a'); R(c, 5, 7, 2, 1, '#1d1120'); R(c, 9, 7, 2, 1, '#1d1120'); R(c, 6, 10, 4, 1, '#1d1120'); R(c, 5, 9, 1, 1, '#1d1120'); R(c, 10, 9, 1, 1, '#1d1120'); R(c, 10, 0, 4, 2, '#2f6f4a'); R(c, 11, 2, 3, 1, '#4f9a5a'); },
+    coaster: function (c) { var pts = [[1, 13], [4, 4], [7, 12], [10, 3], [14, 11]], i; for (i = 0; i < 4; i++) { lineC(c, pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1], '#a8336f'); lineC(c, pts[i][0], pts[i][1] + 1, pts[i + 1][0], pts[i + 1][1] + 1, '#ff8fb8'); } R(c, 9, 1, 3, 2, '#ffd34e'); R(c, 1, 14, 14, 1, '#6b2a4f'); },
+    faithful: function (c) { R(c, 2, 3, 12, 11, '#f6f3ee'); R(c, 2, 3, 12, 3, '#d6453d'); R(c, 4, 1, 1, 3, '#3a2a48'); R(c, 11, 1, 1, 3, '#3a2a48'); lineC(c, 5, 10, 7, 12, '#2f8a3a'); lineC(c, 7, 12, 11, 7, '#2f8a3a'); lineC(c, 5, 9, 7, 11, '#2f8a3a'); lineC(c, 7, 11, 11, 6, '#2f8a3a'); },
+    twins: function (c) { heartC(c, 0, 5, '#ff5d8f'); heartC(c, 9, 5, '#7aa8e8'); R(c, 7, 8, 2, 1, '#fff4fb'); R(c, 4, 1, 1, 2, '#ffd34e'); R(c, 11, 1, 1, 2, '#ffd34e'); },
+    hugs: function (c) { var rows = ['..###....###..', '.#####..#####.', '#############.', '#############.', '.###########..', '..#########...', '...#######....', '....#####.....', '.....###......', '......#.......'], j, i; for (j = 0; j < rows.length; j++) for (i = 0; i < 14; i++) if (rows[j].charAt(i) === '#') R(c, 1 + i, 3 + j, 1, 1, j < 3 && i < 6 ? '#ff8fb8' : '#ff5d8f'); R(c, 11, 1, 3, 1, '#fff'); R(c, 12, 0, 1, 3, '#fff'); },
+    duosun: function (c) { disc(c, 5, 9, 4, '#ffd34e'); disc(c, 11, 9, 4, '#ffb02e'); R(c, 4, 8, 1, 1, '#1d1120'); R(c, 6, 8, 1, 1, '#1d1120'); R(c, 10, 8, 1, 1, '#1d1120'); R(c, 12, 8, 1, 1, '#1d1120'); R(c, 4, 10, 3, 1, '#1d1120'); R(c, 10, 10, 3, 1, '#1d1120'); R(c, 7, 1, 2, 3, '#fff'); R(c, 6, 2, 4, 1, '#fff'); }
+  };
+  // Pour ajouter un badge : une ligne ici + (au besoin) une icône ci-dessus.
+  // solo : test(st) reçoit les chiffres d'une personne ; duo : test(st) reçoit ceux du binôme.
+  var BADGES = [
+    { id: 'joy', who: 'solo', name: 'Joyeuse humeur', desc: "Au moins 60 % de « Bien » ou « Au top » (4 réponses minimum).", test: function (s) { return s.n >= 4 && (s.c[4] + s.c[5]) / s.n >= 0.6; } },
+    { id: 'sun', who: 'solo', name: 'Rayon de soleil', desc: "3 « Au top » d'affilée.", test: function (s) { return s.run5 >= 3; } },
+    { id: 'zen', who: 'solo', name: 'Mode Bof', desc: "La moitié des réponses sont « Bof » (4 minimum).", test: function (s) { return s.n >= 4 && s.c[3] / s.n >= 0.5; } },
+    { id: 'grump', who: 'solo', name: 'Gronchon', desc: "Au moins 4 « Mal » ou « Pas top », et la moitié des réponses.", test: function (s) { return s.c[1] + s.c[2] >= 4 && (s.c[1] + s.c[2]) / s.n >= 0.5; } },
+    { id: 'sad', who: 'solo', name: 'Tristesse infinie', desc: "3 « Mal » d'affilée, ou 4 « Mal » dans le mois.", test: function (s) { return s.run1 >= 3 || s.c[1] >= 4; } },
+    { id: 'coaster', who: 'solo', name: 'Montagnes russes', desc: "Au moins 2 sauts de 3 niveaux ou plus d'un jour à l'autre.", test: function (s) { return s.jumps >= 2; } },
+    { id: 'faithful', who: 'solo', name: 'Assidu·e', desc: "10 réponses ou plus dans le mois.", test: function (s) { return s.n >= 10; } },
+    { id: 'twins', who: 'duo', name: "Jumeaux d'humeur", desc: "3 jours avec exactement la même humeur à deux.", test: function (s) { return s.same >= 3; } },
+    { id: 'duosun', who: 'duo', name: 'Double soleil', desc: "2 jours où vous êtes tous les deux « Au top ».", test: function (s) { return s.both5 >= 2; } },
+    { id: 'hugs', who: 'duo', name: "Câlin d'urgence", desc: "Un jour où l'un avait besoin de l'autre (grand écart d'humeur).", test: function (s) { return s.hugs >= 1; } }
+  ];
+  function monthKeys(y, m) {
+    var pre = y + '-' + pad(m + 1), ks = Object.keys(days).filter(function (k) { return k.indexOf(pre) === 0; });
+    ks.sort(); return ks;
+  }
+  function personStats(ks, i) {
+    var st = { n: 0, c: [0, 0, 0, 0, 0, 0], run1: 0, run5: 0, jumps: 0 }, r1 = 0, r5 = 0, prev = 0;
+    ks.forEach(function (k) {
+      var v = days[k][i]; if (!v) return;
+      st.n++; st.c[v]++;
+      r1 = v === 1 ? r1 + 1 : 0; r5 = v === 5 ? r5 + 1 : 0; st.run1 = Math.max(st.run1, r1); st.run5 = Math.max(st.run5, r5);
+      if (prev && Math.abs(v - prev) >= 3) st.jumps++;
+      prev = v;
+    });
+    return st;
+  }
+  function duoStats(ks) {
+    var st = { same: 0, both5: 0, hugs: 0 };
+    ks.forEach(function (k) { var e = days[k]; if (!e[0] || !e[1]) return; if (e[0] === e[1]) st.same++; if (e[0] === 5 && e[1] === 5) st.both5++; if (Math.abs(e[0] - e[1]) >= 3) st.hugs++; });
+    return st;
+  }
+  function badgeTile(b, on) {
+    var d = document.createElement('div'); d.className = 'badge ' + (on ? 'on' : 'off');
+    var cv = document.createElement('canvas'); cv.width = 16; cv.height = 16; cv.setAttribute('aria-hidden', 'true'); ICONS[b.id](cv.getContext('2d'));
+    var n = document.createElement('b'); n.textContent = b.name;
+    var t = document.createElement('span'); t.textContent = on ? 'Obtenu ce mois-ci' : b.desc;
+    d.appendChild(cv); d.appendChild(n); d.appendChild(t); return d;
+  }
+  function renderBadges() {
+    var box = document.getElementById('badges'); if (!box || !vm) return;
+    var ks = monthKeys(vm.y, vm.m), label = new Date(vm.y, vm.m, 1);
+    box.textContent = '';
+    var h = document.createElement('h2'); h.textContent = 'Badges du mois'; box.appendChild(h);
+    var note = document.createElement('p'); note.className = 'note';
+    note.textContent = 'Calculés d’après les réponses validées de ' + (function () { try { return label.toLocaleDateString('fr-CH', { month: 'long', year: 'numeric' }); } catch (e) { return ''; } })() + '. Ils changent avec le mois affiché plus haut.';
+    box.appendChild(note);
+    var groups = [['Bibi', 0, 'bilge'], ['Lélé', 1, 'lele']];
+    groups.forEach(function (gp) {
+      var st = personStats(ks, gp[1]), solo = BADGES.filter(function (b) { return b.who === 'solo'; });
+      var won = solo.filter(function (b) { return b.test(st); }).length;
+      var h3 = document.createElement('h3'); h3.textContent = gp[0]; var sm = document.createElement('small'); sm.textContent = won + '/' + solo.length + ' badges · ' + st.n + ' réponse' + (st.n > 1 ? 's' : ''); h3.appendChild(sm); box.appendChild(h3);
+      var grid = document.createElement('div'); grid.className = 'bgrid';
+      solo.slice().sort(function (a, b) { return (b.test(st) ? 1 : 0) - (a.test(st) ? 1 : 0); }).forEach(function (b) { grid.appendChild(badgeTile(b, b.test(st))); });
+      box.appendChild(grid);
+    });
+    var ds = duoStats(ks), duo = BADGES.filter(function (b) { return b.who === 'duo'; });
+    var h3d = document.createElement('h3'); h3d.textContent = 'Bibi & Lélé'; var sd = document.createElement('small'); sd.textContent = duo.filter(function (b) { return b.test(ds); }).length + '/' + duo.length + ' badges'; h3d.appendChild(sd); box.appendChild(h3d);
+    var gd = document.createElement('div'); gd.className = 'bgrid';
+    duo.forEach(function (b) { gd.appendChild(badgeTile(b, b.test(ds))); });
+    box.appendChild(gd);
+  }
+
+  /* ---------- journal des mises à jour ---------- */
+  // Pour ajouter une mise à jour : une entrée en haut de la liste (la plus récente d'abord).
+  var CHANGELOG = [
+    { date: '2026-10-28', title: 'Mercredi 28 octobre 2026', items: [
+      'Premières versions : choix d’humeur avec nos portraits, paysages en pixel art qui changent selon la somme des deux humeurs.',
+      '5 humeurs, 11 univers (dont le câlin quand l’écart est grand) et une jauge sur 9.',
+      'Date, historique et statistiques du mois avec graphique et petites phrases rigolotes.',
+      'Carnet partagé sur Netlify : chacun répond depuis son appareil, synchro automatique, file d’attente hors connexion.',
+      'Personnages animés dans chaque décor : rame, tandem, danse, cerf-volant, guitare…',
+      'Bateau qui traverse l’écran, randonneurs sur les montagnes, feu de camp avec animaux qui dansent.',
+      'Valider son humeur : on essaie librement, puis le choix est verrouillé (modifiable le jour même).',
+      'Au départ, scène de bureau avec des collègues qui passent ; le décor ne change qu’une fois les deux choix validés.',
+      'Orage : on pleure dans les bras l’un de l’autre ; câlins sous un ciel coupé en deux (soleil / pluie).',
+      'Cagnotte : 20 pièces par jour de réponse et par personne.',
+      'Boutique : animaux, habits et accessoires, cadeaux et envoi de pièces entre nous.',
+      'Avatars agrandis d’environ 25 %.',
+      'Badges du mois et ce journal des mises à jour.'
+    ] }
+  ];
+  (function () {
+    var box = document.getElementById('changelog'); if (!box) return;
+    CHANGELOG.forEach(function (day, n) {
+      var d = document.createElement('details'); if (n === 0) d.open = true;
+      var sm = document.createElement('summary'); sm.textContent = day.title; d.appendChild(sm);
+      var ul = document.createElement('ul'); day.items.forEach(function (t) { var li = document.createElement('li'); li.textContent = t; ul.appendChild(li); });
+      d.appendChild(ul); box.appendChild(d);
+    });
+  })();
+
   function renderStats() {
     if (!vm) return;
+    renderBadges();
     var y = vm.y, m = vm.m, dim = new Date(y, m + 1, 0).getDate();
     var src = days, list = [], d, e, k;
     for (d = 1; d <= dim; d++) { k = y + '-' + pad(m + 1) + '-' + pad(d); e = src[k]; list.push(e && e[0] && e[1] ? { d: d, b: e[0], l: e[1], kind: kindFor(e[0], e[1], k) } : null); }
