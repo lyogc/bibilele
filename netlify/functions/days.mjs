@@ -2,7 +2,7 @@ import { getStore } from "@netlify/blobs";
 
 // Carnet partagé du Baromètre du bonheur.
 // GET  /api/days?month=2026-10          -> { days: { "2026-10-28": [humeurBilge, humeurLele], ... } }
-// POST /api/days {day, who, value}      -> enregistre l'humeur (1 à 4) d'une personne pour un jour
+// POST /api/days {day, who, value}      -> enregistre l'humeur (1 à 5) d'une personne pour un jour
 // Chaque réponse est une entrée séparée ("2026-10-28/bilge") : si Bilge et Lélé
 // répondent en même temps, aucune des deux réponses n'écrase l'autre.
 
@@ -17,7 +17,7 @@ const json = (body, status = 200) =>
   });
 
 export default async (req) => {
-  const store = getStore({ name: "humeurs", consistency: "strong" });
+  const store = getStore({ name: "humeurs5", consistency: "strong" });
 
   if (req.method === "GET") {
     const month = new URL(req.url).searchParams.get("month") || "";
@@ -30,7 +30,7 @@ export default async (req) => {
         const idx = WHO.indexOf(who);
         if (!DAY.test(day) || idx < 0) return;
         const v = Number(await store.get(key));
-        if (!(v >= 1 && v <= 4)) return;
+        if (!(v >= 1 && v <= 5)) return;
         (days[day] ||= [0, 0])[idx] = v;
       })
     );
@@ -42,7 +42,7 @@ export default async (req) => {
     let body;
     try { body = await req.json(); } catch { return json({ error: "json invalide" }, 400); }
     const { day, who, value } = body || {};
-    if (!DAY.test(day || "") || !WHO.includes(who) || !Number.isInteger(value) || value < 1 || value > 4) {
+    if (!DAY.test(day || "") || !WHO.includes(who) || !Number.isInteger(value) || value < 1 || value > 5) {
       return json({ error: "données invalides" }, 400);
     }
     const d = new Date(day + "T00:00:00Z");
