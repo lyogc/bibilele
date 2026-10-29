@@ -18,11 +18,17 @@ const json = (body, status = 200) =>
   });
 
 export default async (req) => {
-  const store = getStore({ name: "humeurs-v1", consistency: "strong" });
+  // L'humeur de l'après-midi vit dans son propre espace : elle ne compte ni dans la cagnotte, ni dans les statistiques, ni dans les badges.
+  const url = new URL(req.url);
+  const pm = url.searchParams.get("period") === "pm";
+  let bodyCache = null;
+  if (req.method !== "GET") { try { bodyCache = await req.clone().json(); } catch { bodyCache = null; } }
+  const isPm = pm || (bodyCache && bodyCache.period === "pm");
+  const store = getStore({ name: isPm ? "humeurs-pm-v1" : "humeurs-v1", consistency: "strong" });
 
   if (req.method === "GET") {
     // Cagnotte : 1 pièce par personne et par jour où une humeur a été donnée.
-    if (new URL(req.url).searchParams.get("coins")) {
+    if (!isPm && new URL(req.url).searchParams.get("coins")) {
       const { blobs } = await store.list();
       const out = { bilge: 0, lele: 0, keys: {} };
       for (const { key } of blobs) {
@@ -77,6 +83,7 @@ export default async (req) => {
     if (!DAY.test(day || "") || !WHO.includes(who)) return json({ error: "données invalides" }, 400);
     const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Zurich" });
     if (day !== today) return json({ error: "Seule la réponse du jour peut être modifiée" }, 403);
+    if (isPm) { await store.delete(`${day}/${who}`); return json({ ok: true }); }
     const shop = getStore({ name: "boutique-v1", consistency: "strong" });
     const { blobs } = await store.list();
     const answered = blobs.filter(({ key }) => key.endsWith("/" + who)).length;

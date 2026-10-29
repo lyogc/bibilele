@@ -167,6 +167,12 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
 .shop button[aria-pressed="true"], .shop button.on { background: color-mix(in srgb, var(--acc) 35%, var(--plum)); border-color: var(--acc); }
 .shop button:hover:not(:disabled) { border-color: var(--acc); }
 .badge.on { border-color: var(--acc); }
+.period { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.period .lbl { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--violet); font-weight: 600; }
+.period button { background: var(--card); border: 2px solid var(--wine); color: var(--lav); font: 600 14px var(--font-body); padding: 4px 14px; min-height: 34px; cursor: pointer; }
+.period button[aria-pressed="true"] { background: #f06ea0; border-color: #f06ea0; color: #2a0f24; }
+.period button:not([aria-pressed="true"]):hover { border-color: var(--magenta); }
+.period small { color: var(--violet); font-size: 12px; }
 .foot { display: flex; justify-content: center; padding: 4px 0 8px; }
 button.linkbtn { background: transparent; border: 0; color: var(--violet); font: 600 14px var(--font-body); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; padding: 8px 12px; }
 button.linkbtn:hover { color: #fff4fb; }
@@ -212,6 +218,12 @@ dialog#logDlg::backdrop { background: rgba(10, 4, 16, .72); }
     </div>
   </section>
 
+  <div class="period" id="period" role="group" aria-label="Moment de la journée">
+    <span class="lbl">Humeur du</span>
+    <button type="button" data-period="am" aria-pressed="true">Matin</button>
+    <button type="button" data-period="pm" aria-pressed="false">Après-midi</button>
+    <small id="periodNote"></small>
+  </div>
   <section class="pickers" id="pickers"></section>
 
   <section class="shop sec sec-shop" id="shop" aria-label="Boutique">
@@ -731,7 +743,7 @@ dialog#logDlg::backdrop { background: rgba(10, 4, 16, .72); }
     function desk(x, who, px, nm) {
       var py = HY + 2 + (Math.floor(t * 1.2 + (who === 'lele' ? 0.5 : 0)) % 2 ? 0 : 0), k2 = colors(who), oc = topColor(who);
       if (oc) k2.top = oc;
-      var lk = s[who] > 0, mood = lk ? MOODNAMES[s[who] - 1] : (draft[cur + who] ? MOODNAMES[draft[cur + who] - 1] : 'neutral');
+      var lk = s[who] > 0, mood = lk ? MOODNAMES[s[who] - 1] : (draft[period + cur + who] ? MOODNAMES[draft[period + cur + who] - 1] : 'neutral');
       R(g, px - 1, 76, 18, 16, '#4a3a5c'); R(g, px - 1, 76, 18, 2, '#6a5a7c'); R(g, px + 3, 74, 10, 3, '#6a5a7c');
       actor(who, px, py + (Math.sin(t * 2 + px) > 0.9 ? 1 : 0), mood, { legs: 'hide', L: 'none', R: 'none', lean: Math.floor(t * 0.5 + px) % 4 === 0 ? 1 : 0 });
       g.globalAlpha = 0.08 + 0.04 * Math.sin(t * 3 + px); R(g, px + 3, py + 4, 10, 10, '#bfe4ff'); g.globalAlpha = 1;
@@ -1301,6 +1313,10 @@ dialog#logDlg::backdrop { background: rgba(10, 4, 16, .72); }
     } else {
       title = TEXTS[k][0]; cap = TEXTS[k][1]; level = state.bilge + state.lele - 1;
     }
+    if (period === 'pm') {
+      title = title.replace('ce matin', 'cet après-midi').replace('Qui s\u2019est levé du bon pied ?', 'Et cet après-midi ?').replace("Qui s'est levé du bon pied ?", 'Et cet après-midi ?');
+      cap = cap.replace('humeur du matin', 'humeur de l\u2019après-midi').replace('matinée', 'après-midi').replace('la matinée', 'l\u2019après-midi');
+    }
     document.getElementById('title').textContent = title;
     document.getElementById('caption').textContent = cap;
     document.getElementById('gaugeval').textContent = level ? level + '/9' : '–';
@@ -1318,10 +1334,10 @@ dialog#logDlg::backdrop { background: rgba(10, 4, 16, .72); }
 
   var LABELS = ['Mal', 'Pas top', 'Bof', 'Bien', 'Au top'];
   var pickers = document.getElementById('pickers');
-  var buttons = { bilge: [], lele: [] }, vbtn = {}, ubtn = {}, vmsg = {}, boxes = {}, draft = {};
+  var buttons = { bilge: [], lele: [] }, vbtn = {}, ubtn = {}, vmsg = {}, boxes = {}, draft = {}, titles = {};
   ['bilge', 'lele'].forEach(function (who) {
     var box = document.createElement('div'); box.className = 'who sec sec-hum';
-    var h = document.createElement('h3'); h.textContent = NAMES[who] + ', ton humeur ce matin ?'; box.appendChild(h);
+    var h = document.createElement('h3'); h.textContent = NAMES[who] + ', ton humeur ce matin ?'; box.appendChild(h); titles[who] = h;
     var row = document.createElement('div'); row.className = 'moods'; box.appendChild(row);
     for (var v = 1; v <= 5; v++) (function (v) {
       var b = document.createElement('button'); b.type = 'button'; b.className = 'mood';
@@ -1342,18 +1358,21 @@ dialog#logDlg::backdrop { background: rgba(10, 4, 16, .72); }
 
   function sync() {
     ['bilge', 'lele'].forEach(function (who) {
-      var lk = isLocked(cur, who), dv = draft[cur + who] || 0;
-      buttons[who].forEach(function (b, i) { b.setAttribute('aria-pressed', (lk ? state[who] : dv) === i + 1 ? 'true' : 'false'); });
+      var lk = isLocked(cur, who), dv = draft[period + cur + who] || 0, locked = lk ? store()[cur][WHO[who]] : 0;
+      titles[who].textContent = NAMES[who] + (period === 'pm' ? ', ton humeur cet après-midi ?' : ', ton humeur ce matin ?');
+      buttons[who].forEach(function (b, i) { b.setAttribute('aria-pressed', (lk ? locked : dv) === i + 1 ? 'true' : 'false'); });
       boxes[who].classList.toggle('locked', lk);
       var canEdit = lk && cur === todayKey;
       vbtn[who].disabled = lk ? !canEdit : !dv;
       vbtn[who].classList.toggle('done', lk);
       vbtn[who].textContent = lk ? (canEdit ? 'Choix validé ✓ · Modifier' : 'Choix validé ✓') : (dv ? 'Valider mon choix : ' + LABELS[dv - 1] : 'Choisis ton humeur');
     });
+    document.querySelectorAll('[data-period]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-period') === period)); });
+    document.getElementById('periodNote').textContent = sceneFallback ? 'En attendant vos humeurs de l\u2019après-midi, on garde la scène du matin.' : '';
     readout(); draw(now()); renderStats();
   }
   /* ---------- dates et historique ---------- */
-  var KEY = 'barometre-bonheur-v1', days = {}, cur, vm;
+  var KEY = 'barometre-bonheur-v1', days = {}, daysPM = {}, cur, vm, period = (new Date().getHours() >= 12 ? 'pm' : 'am'), sceneFallback = false;
   var MOODWORD = ['Mal', 'Pas top', 'Bof', 'Bien', 'Au top'];
   var KINDINFO = {
     rain: ['Pluie', '#5b4a8c'], cloudy: ['Nuageux', '#a77bcf'], garden: ['Jardin', '#4f9a5a'], river: ["Bord de l'eau", '#3f78c8'],
@@ -1367,39 +1386,45 @@ dialog#logDlg::backdrop { background: rgba(10, 4, 16, .72); }
   var CACHE = 'barometre-bonheur-cache-v3', OUTBOX = 'barometre-bonheur-outbox-v2', API = '/api/days', SHOPAPI = '/api/shop';
   var WHO = { bilge: 0, lele: 1 }, outbox = [], lastWrite = {}, net = 'unknown', flushing = false;
   try { var raw = localStorage.getItem(CACHE); if (raw) days = JSON.parse(raw) || {}; } catch (e) { days = {}; }
+  try { var rawP = localStorage.getItem('barometre-bonheur-pm-v1'); if (rawP) daysPM = JSON.parse(rawP) || {}; } catch (e) { daysPM = {}; }
+  function store(p) { return (p || period) === 'pm' ? daysPM : days; }
   try { var rawO = localStorage.getItem(OUTBOX); if (rawO) outbox = JSON.parse(rawO) || []; } catch (e) { outbox = []; }
   function persist() {
-    try { localStorage.setItem(CACHE, JSON.stringify(days)); localStorage.setItem(OUTBOX, JSON.stringify(outbox)); } catch (e) {}
+    try { localStorage.setItem('barometre-bonheur-pm-v1', JSON.stringify(daysPM)); localStorage.setItem(CACHE, JSON.stringify(days)); localStorage.setItem(OUTBOX, JSON.stringify(outbox)); } catch (e) {}
   }
-  function isLocked(day, who) { var e = days[day]; return !!(e && e[WHO[who]] > 0); }
+  function isLocked(day, who, p) { var e = store(p)[day]; return !!(e && e[WHO[who]] > 0); }
   function stateFor(day) {
-    ['bilge', 'lele'].forEach(function (w) { state[w] = isLocked(day, w) ? days[day][WHO[w]] : 0; });   // seul le choix validé fait changer la scène
+    // seul le choix validé fait changer la scène ; l'après-midi, tant que les deux n'ont pas répondu, on garde la scène du matin
+    var src = period;
+    sceneFallback = false;
+    if (period === 'pm' && !isLocked(day, 'bilge', 'pm') && !isLocked(day, 'lele', 'pm') && isLocked(day, 'bilge', 'am') && isLocked(day, 'lele', 'am')) { src = 'am'; sceneFallback = true; }
+    ['bilge', 'lele'].forEach(function (w) { state[w] = isLocked(day, w, src) ? store(src)[day][WHO[w]] : 0; });
   }
   function pick(who, v) {            // simple essai : rien n'est enregistré avant « Valider »
     if (isLocked(cur, who)) return;
-    draft[cur + who] = v; sync();
+    draft[period + cur + who] = v; sync();
   }
   function validate(who) {
-    var v = draft[cur + who];
+    var v = draft[period + cur + who], S = store();
     if (!v || isLocked(cur, who)) return;
-    var e = (days[cur] || [0, 0]).slice(); e[WHO[who]] = v; days[cur] = e;
-    delete draft[cur + who];
-    lastWrite[cur + who] = Date.now();
-    outbox = outbox.filter(function (o) { return !(o.day === cur && o.who === who); });
-    outbox.push({ day: cur, who: who, value: v });
+    var e = (S[cur] || [0, 0]).slice(); e[WHO[who]] = v; S[cur] = e;
+    delete draft[period + cur + who];
+    lastWrite[period + cur + who] = Date.now();
+    outbox = outbox.filter(function (o) { return !(o.day === cur && o.who === who && (o.period || 'am') === period); });
+    outbox.push(period === 'pm' ? { day: cur, who: who, value: v, period: 'pm' } : { day: cur, who: who, value: v });
     persist(); stateFor(cur); sync(); flush();
   }
   function unvalidate(who) {       // reprendre sa réponse du jour (la veille, c'est définitif)
     if (!isLocked(cur, who) || cur !== todayKey) return;
-    var day = cur, old = days[day][WHO[who]];
+    var day = cur, per = period, S = store(per), old = S[day][WHO[who]];
     vmsg[who].textContent = '…';
-    fetch(API, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ day: day, who: who }) })
+    fetch(API, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(per === 'pm' ? { day: day, who: who, period: 'pm' } : { day: day, who: who }) })
       .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
       .then(function (x) {
         if (!x.ok) { vmsg[who].textContent = x.j.error || 'Impossible pour le moment'; return; }
-        var e = (days[day] || [0, 0]).slice(); e[WHO[who]] = 0; days[day] = e;
-        outbox = outbox.filter(function (o) { return !(o.day === day && o.who === who); });
-        draft[day + who] = old; lastWrite[day + who] = Date.now();
+        var e = (S[day] || [0, 0]).slice(); e[WHO[who]] = 0; S[day] = e;
+        outbox = outbox.filter(function (o) { return !(o.day === day && o.who === who && (o.period || 'am') === per); });
+        draft[per + day + who] = old; lastWrite[per + day + who] = Date.now();
         vmsg[who].textContent = ''; persist();
         if (cur === day) { stateFor(day); sync(); }
         fetchShop();
@@ -1414,31 +1439,33 @@ dialog#logDlg::backdrop { background: rgba(10, 4, 16, .72); }
       .then(function (r) {
         if (!r.ok && r.status !== 409) throw new Error('http ' + r.status);
         net = 'ok';
-        outbox = outbox.filter(function (x) { return !(x.day === o.day && x.who === o.who && x.value === o.value); });
+        outbox = outbox.filter(function (x) { return !(x.day === o.day && x.who === o.who && x.value === o.value && x.period === o.period); });
         persist(); flushing = false; renderStats(); fetchShop();
         return flush();
       })
       .catch(function () { net = 'off'; flushing = false; renderStats(); });
   }
-  function pending(day, who) {
-    if (Date.now() - (lastWrite[day + who] || 0) < 6000) return true;
-    return outbox.some(function (o) { return o.day === day && o.who === who; });
+  function pending(day, who, p) {
+    p = p || 'am';
+    if (Date.now() - (lastWrite[p + day + who] || 0) < 6000) return true;
+    return outbox.some(function (o) { return o.day === day && o.who === who && (o.period || 'am') === p; });
   }
-  function mergeServer(obj, prefix) {
-    var before = JSON.stringify(days);
-    if (prefix) Object.keys(days).forEach(function (k) {       // réponses reprises depuis un autre appareil
+  function mergeServer(obj, prefix, p) {
+    p = p || 'am'; var S = store(p);
+    var before = JSON.stringify(S);
+    if (prefix) Object.keys(S).forEach(function (k) {       // réponses reprises depuis un autre appareil
       if (k.indexOf(prefix) !== 0) return;
-      var srv = obj[k] || [0, 0], loc = days[k].slice(), ch = false;
-      ['bilge', 'lele'].forEach(function (w) { var i = WHO[w]; if (loc[i] && !srv[i] && !pending(k, w)) { loc[i] = 0; ch = true; } });
-      if (ch) days[k] = loc;
+      var srv = obj[k] || [0, 0], loc = S[k].slice(), ch = false;
+      ['bilge', 'lele'].forEach(function (w) { var i = WHO[w]; if (loc[i] && !srv[i] && !pending(k, w, p)) { loc[i] = 0; ch = true; } });
+      if (ch) S[k] = loc;
     });
     Object.keys(obj).forEach(function (k) {
-      var srv = obj[k], loc = (days[k] || [0, 0]).slice();
-      ['bilge', 'lele'].forEach(function (w) { var i = WHO[w]; if (srv[i] && !pending(k, w)) loc[i] = srv[i]; });
-      days[k] = loc;
+      var srv = obj[k], loc = (S[k] || [0, 0]).slice();
+      ['bilge', 'lele'].forEach(function (w) { var i = WHO[w]; if (srv[i] && !pending(k, w, p)) loc[i] = srv[i]; });
+      S[k] = loc;
     });
     stateFor(cur);
-    if (JSON.stringify(days) !== before) { persist(); sync(); }
+    if (JSON.stringify(S) !== before) { persist(); sync(); }
     renderCoins();
   }
   var coinShown = -1, shopState = null;
@@ -1543,9 +1570,14 @@ dialog#logDlg::backdrop { background: rgba(10, 4, 16, .72); }
   }
 
   function fetchMonth(y, m) {
-    return fetch(API + '?month=' + y + '-' + pad(m + 1), { cache: 'no-store' })
+    var mk = y + '-' + pad(m + 1);
+    var pmReq = fetch(API + '?period=pm&month=' + mk, { cache: 'no-store' })
       .then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
-      .then(function (data) { var was = net; net = 'ok'; mergeServer(data.days || {}, y + '-' + pad(m + 1)); if (was !== 'ok') renderStats(); })
+      .then(function (data) { mergeServer(data.days || {}, mk, 'pm'); })
+      .catch(function () {});
+    return fetch(API + '?month=' + mk, { cache: 'no-store' })
+      .then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
+      .then(function (data) { var was = net; net = 'ok'; mergeServer(data.days || {}, mk); if (was !== 'ok') renderStats(); return pmReq; })
       .catch(function () { if (net !== 'off') { net = 'off'; renderStats(); } });
   }
   function poll() {
@@ -1573,6 +1605,9 @@ dialog#logDlg::backdrop { background: rgba(10, 4, 16, .72); }
     var d = parseKey(k); vm = { y: d.getFullYear(), m: d.getMonth() };
     dayUI(); sync(); poll();
   }
+  document.querySelectorAll('[data-period]').forEach(function (b) {
+    b.addEventListener('click', function () { period = b.getAttribute('data-period'); stateFor(cur); sync(); });
+  });
   function shiftDay(n) { var d = parseKey(cur); d.setDate(d.getDate() + n); setDay(ymd(d)); }
   document.getElementById('dprev').addEventListener('click', function () { shiftDay(-1); });
   elNext.addEventListener('click', function () { shiftDay(1); });
@@ -1677,7 +1712,8 @@ dialog#logDlg::backdrop { background: rgba(10, 4, 16, .72); }
       'Mise en page par sections colorées : humeurs en rose, boutique en orange, statistiques en bleu, badges en vert.',
       'La cagnotte, la boutique, le placard et l’envoi/réception de pièces sont regroupés dans une seule section.',
       'Un seul bouton pour valider, puis modifier son choix (le jour même).',
-      'Le journal des mises à jour s’ouvre en pop-up depuis le lien en bas de page.'
+      'Le journal des mises à jour s’ouvre en pop-up depuis le lien en bas de page.',
+      'Humeur du matin et de l’après-midi : un sélecteur choisit le moment ; la scène suit le moment de la journée (celle du matin tant que l’après-midi n’est pas répondu). Pièces, statistiques et badges restent basés sur le matin.'
     ] },
     { date: '2026-10-28', title: 'Mercredi 28 octobre 2026', items: [
       'Premières versions : choix d’humeur avec nos portraits, paysages en pixel art qui changent selon la somme des deux humeurs.',
