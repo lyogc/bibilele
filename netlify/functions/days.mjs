@@ -1,5 +1,5 @@
 import { getStore } from "@netlify/blobs";
-import { CATALOG } from "./shop.mjs";
+import { CATALOG, SPELLS, ANTIDOTE } from "./shop.mjs";
 import { jailRecord } from "./jail.mjs";
 
 // Carnet partagé du Baromètre du bonheur.
@@ -99,6 +99,8 @@ export default async (req) => {
       if (e.type === "gift" && e.from === who) spent += CATALOG[e.item]?.price || 0;
       if (e.type === "send" && e.from === who) spent += e.amount;
       if (e.type === "send" && e.to === who) received += e.amount;
+      if (e.type === "spell" && e.from === who) spent += SPELLS[e.kind]?.price || 0;
+      if (e.type === "antidote" && e.who === who) spent += ANTIDOTE;
     }
     if ((answered - 1) * 20 + received - spent < 0) return json({ error: "Tu as déjà dépensé les pièces de cette réponse" }, 409);
     await store.delete(`${day}/${who}`);

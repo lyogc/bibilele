@@ -8,7 +8,12 @@ import { jailRecord } from "./jail.mjs";
 // Le solde se recalcule toujours à partir du journal, donc deux personnes qui agissent en même
 // temps ne peuvent pas s'écraser l'une l'autre.
 // GET  /api/shop                      -> { balance, owned, equipped, events, catalog, daily }
-// POST /api/shop {action, ...}        -> buy | gift | send | equip
+// POST /api/shop {action, ...}        -> buy | gift | send | equip | cast | antidote
+
+// Sorts : une potion transforme l'autre en animal pendant 1 h ; l'antidote (pour soi) annule le sort.
+export const SPELLS = { pig: { price: 60 }, goat: { price: 60 }, frog: { price: 50 }, hen: { price: 50 } };
+export const ANTIDOTE = 40;
+const SPELL_MS = 60 * 60 * 1000;
 
 const WHO = ["bilge", "lele"];
 const DAILY = 20;
@@ -56,12 +61,21 @@ async function load() {
     if (e.type === "buy") { balance[e.who] -= CATALOG[e.item].price; owned[e.who].push(e.item); }
     if (e.type === "gift") { balance[e.from] -= CATALOG[e.item].price; owned[e.to].push(e.item); }
     if (e.type === "send") { balance[e.from] -= e.amount; balance[e.to] += e.amount; }
+    if (e.type === "spell" && SPELLS[e.kind]) balance[e.from] -= SPELLS[e.kind].price;
+    if (e.type === "antidote") balance[e.who] -= ANTIDOTE;
   }
   const equipped = { bilge: {}, lele: {} };
   for (const w of WHO) {
     try { equipped[w] = JSON.parse((await shop.get("eq/" + w)) || "{}") || {}; } catch { equipped[w] = {}; }
   }
-  return { shop, balance, owned, equipped, events };
+  const curses = { bilge: null, lele: null };
+  for (const w of WHO) {
+    try {
+      const c = JSON.parse((await shop.get("curse/" + w)) || "null");
+      if (c && c.until > Date.now() && SPELLS[c.kind]) curses[w] = c; else if (c) await shop.delete("curse/" + w);
+    } catch { curses[w] = null; }
+  }
+  return { shop, balance, owned, equipped, events, curses };
 }
 
 const other = (w) => (w === "bilge" ? "lele" : "bilge");
@@ -69,11 +83,12 @@ const clean = (s) => String(s || "").replace(/[\u0000-\u001f<>]/g, "").slice(0, 
 
 export default async (req) => {
   if (req.method === "GET") {
-    const { balance, owned, equipped, events } = await load();
+    const { balance, owned, equipped, events, curses } = await load();
     return json({
       daily: DAILY,
       catalog: Object.fromEntries(Object.entries(CATALOG).map(([k, v]) => [k, v.price])),
-      balance, owned, equipped,
+      balance, owned, equipped, curses, now: Date.now(),
+      spells: Object.fromEntries(Object.entries(SPELLS).map(([k, v]) => [k, v.price])), antidote: ANTIDOTE,
       events: events.filter((e) => e.type !== "buy").slice(-12).reverse(),
     });
   }
@@ -108,6 +123,24 @@ export default async (req) => {
       if (!WHO.includes(b.from) || !Number.isInteger(b.amount) || b.amount < 1 || b.amount > 100000) return json({ error: "demande invalide" }, 400);
       if (balance[b.from] < b.amount) return json({ error: "Pas assez de pièces" }, 402);
       await add({ type: "send", from: b.from, to: other(b.from), amount: b.amount, msg: clean(b.msg) });
+      return json({ ok: true });
+    }
+    if (b.action === "cast") {
+      const sp = SPELLS[b.kind];
+      if (!WHO.includes(b.from) || !sp) return json({ error: "demande invalide" }, 400);
+      const to = other(b.from);
+      if (st.curses[to]) return json({ error: "Déjà transformé(e) !" }, 409);
+      if (balance[b.from] < sp.price) return json({ error: "Pas assez de pièces" }, 402);
+      await add({ type: "spell", from: b.from, to, kind: b.kind });
+      await shop.set("curse/" + to, JSON.stringify({ kind: b.kind, by: b.from, at: Date.now(), until: Date.now() + SPELL_MS }));
+      return json({ ok: true });
+    }
+    if (b.action === "antidote") {
+      if (!WHO.includes(b.who)) return json({ error: "demande invalide" }, 400);
+      if (!st.curses[b.who]) return json({ error: "Aucun sort à annuler" }, 409);
+      if (balance[b.who] < ANTIDOTE) return json({ error: "Pas assez de pièces" }, 402);
+      await add({ type: "antidote", who: b.who });
+      await shop.delete("curse/" + b.who);
       return json({ ok: true });
     }
     if (b.action === "equip") {
