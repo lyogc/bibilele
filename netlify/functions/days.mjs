@@ -1,5 +1,6 @@
 import { getStore } from "@netlify/blobs";
 import { CATALOG } from "./shop.mjs";
+import { jailRecord } from "./jail.mjs";
 
 // Carnet partagé du Baromètre du bonheur.
 // GET  /api/days?month=2026-10          -> { days: { "2026-10-28": [humeurBilge, humeurLele], ... } }
@@ -63,6 +64,7 @@ export default async (req) => {
     if (!DAY.test(day || "") || !WHO.includes(who) || !Number.isInteger(value) || value < 1 || value > 5) {
       return json({ error: "données invalides" }, 400);
     }
+    if (await jailRecord(who)) return json({ error: "Tu es en prison" }, 423);
     const d = new Date(day + "T00:00:00Z");
     if (Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== day) return json({ error: "date invalide" }, 400);
     if (d.getUTCFullYear() < 2020 || d.getTime() > Date.now() + 2 * 86400000) return json({ error: "date hors limites" }, 400);
@@ -81,6 +83,7 @@ export default async (req) => {
     try { body = await req.json(); } catch { return json({ error: "json invalide" }, 400); }
     const { day, who } = body || {};
     if (!DAY.test(day || "") || !WHO.includes(who)) return json({ error: "données invalides" }, 400);
+    if (await jailRecord(who)) return json({ error: "Tu es en prison" }, 423);
     const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Zurich" });
     if (day !== today) return json({ error: "Seule la réponse du jour peut être modifiée" }, 403);
     if (isPm) { await store.delete(`${day}/${who}`); return json({ ok: true }); }

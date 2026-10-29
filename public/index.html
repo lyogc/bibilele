@@ -97,6 +97,13 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
 .purse-text b { font-family: var(--font-display); font-size: 26px; color: #ffd34e; }
 .purse-text small { display: block; color: var(--lav); }
 .shop { background: var(--card); border: 3px solid var(--wine); padding: 16px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.shop-sum { list-style: none; display: flex; align-items: center; gap: 12px; cursor: pointer; }
+.shop-sum::-webkit-details-marker { display: none; }
+.shop-sum h2 { flex: 1; }
+.sum-coins { font-weight: 700; color: #ffd34e; }
+.chev { width: 10px; height: 10px; border-right: 3px solid var(--acc); border-bottom: 3px solid var(--acc); transform: rotate(45deg); margin: 0 4px 4px 0; transition: transform .15s; }
+.shop[open] .chev { transform: rotate(-135deg); margin: 4px 4px 0 0; }
+.shop-in { display: flex; flex-direction: column; gap: 14px; margin-top: 14px; }
 .shop h2 { margin: 0; font-family: var(--font-display); font-weight: 500; font-size: 24px; color: #fff4fb; }
 .shop-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
 .me { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--violet); }
@@ -173,6 +180,22 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
 .period button[aria-pressed="true"] { background: #f06ea0; border-color: #f06ea0; color: #2a0f24; }
 .period button:not([aria-pressed="true"]):hover { border-color: var(--magenta); }
 .period small { color: var(--violet); font-size: 12px; }
+.sec-jail { --acc: #9aa3b8; background-image: repeating-linear-gradient(90deg, rgba(154,163,184,.16) 0 4px, transparent 4px 22px) !important; }
+.jailband { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; background-color: var(--card); border: 3px solid var(--wine); padding: 16px; }
+.jailband h2 { margin: 0; font-family: var(--font-display); font-weight: 500; font-size: 22px; color: var(--acc); }
+.jailband .jtxt { flex: 1 1 220px; margin: 0; color: var(--lav); font-size: 14px; }
+.jailband button { background: var(--plum); border: 2px solid #9aa3b8; color: #fff4fb; font: 700 14px var(--font-body); padding: 6px 14px; min-height: 36px; cursor: pointer; }
+.jailband button:hover { background: #3a3350; }
+.jailband button.danger { border-color: #f06ea0; }
+.jailband .jme { display: flex; gap: 6px; align-items: center; font-size: 14px; color: var(--violet); }
+.jailov { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; background: rgba(12, 8, 20, .93); padding: 16px; }
+.jailov[hidden] { display: none; }
+.jailbars { position: absolute; inset: 0; background: repeating-linear-gradient(90deg, #6b7287 0 14px, transparent 14px 64px); opacity: .85; pointer-events: none; }
+.jailcard { position: relative; background: var(--card); border: 3px solid #9aa3b8; padding: 22px 20px; max-width: 380px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.jailcard canvas { width: 96px; height: 108px; image-rendering: pixelated; }
+.jailcard h2 { margin: 0; font-family: var(--font-display); font-size: 24px; color: #fff4fb; }
+.jailcard p { margin: 0; }
+body.jailed { overflow: hidden; }
 .foot { display: flex; justify-content: center; padding: 4px 0 8px; }
 button.linkbtn { background: transparent; border: 0; color: var(--violet); font: 600 14px var(--font-body); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; padding: 8px 12px; }
 button.linkbtn:hover { color: #fff4fb; }
@@ -226,14 +249,15 @@ dialog#logDlg::backdrop { background: rgba(10, 4, 16, .72); }
   </div>
   <section class="pickers" id="pickers"></section>
 
-  <section class="shop sec sec-shop" id="shop" aria-label="Boutique">
-    <div class="shop-top">
-      <h2>Boutique</h2>
-      <div class="me">Je suis
+  <section class="jailband sec sec-jail" id="jailband" aria-label="Prison"></section>
+
+  <details class="shop sec sec-shop" id="shop">
+    <summary class="shop-sum"><h2>Boutique</h2><span class="sum-coins" id="coinMini"></span><span class="chev" aria-hidden="true"></span></summary>
+    <div class="shop-in">
+    <div class="me">Je suis
         <button type="button" data-me="bilge" aria-pressed="false">Bibi</button>
         <button type="button" data-me="lele" aria-pressed="false">Lélé</button>
       </div>
-    </div>
     <div class="purse" aria-label="Cagnotte">
       <div class="coin" aria-hidden="true"></div>
       <div class="purse-text"><b id="coinTotal">0</b> <span id="coinLbl">pièce dans la cagnotte</span>
@@ -247,7 +271,8 @@ dialog#logDlg::backdrop { background: rgba(10, 4, 16, .72); }
     <div id="shopBody"></div>
     <p class="shopmsg" id="shopMsg" aria-live="polite"></p>
     <ul class="inbox" id="inbox"></ul>
-  </section>
+      </div>
+  </details>
 
   <section class="stats sec sec-stats" aria-label="Statistiques">
     <div class="stats-head">
@@ -266,6 +291,14 @@ dialog#logDlg::backdrop { background: rgba(10, 4, 16, .72); }
   </section>
   <section class="badges sec sec-badges" id="badges" aria-label="Badges du mois"></section>
 
+  <div id="jailOv" class="jailov" hidden role="alertdialog" aria-live="assertive" aria-labelledby="jailTitle">
+    <div class="jailbars" aria-hidden="true"></div>
+    <div class="jailcard">
+      <canvas id="jailFace" width="16" height="18" aria-hidden="true"></canvas>
+      <h2 id="jailTitle">Tu es en prison !</h2>
+      <p id="jailText"></p>
+    </div>
+  </div>
   <div class="foot"><button type="button" class="linkbtn" id="logOpen">Journal des mises à jour</button></div>
   <dialog id="logDlg" aria-labelledby="logTitle">
     <div class="dlg-head"><h2 id="logTitle">Journal des mises à jour</h2><button type="button" class="dlg-x" id="logClose">Fermer</button></div>
@@ -1469,12 +1502,55 @@ dialog#logDlg::backdrop { background: rgba(10, 4, 16, .72); }
     renderCoins();
   }
   var coinShown = -1, shopState = null;
+  /* ---------- prison ---------- */
+  var JAIL = { bilge: null, lele: null }, JAILAPI = '/api/jail', jailSkew = 0;
+  function jmin(rec) { return Math.max(1, Math.ceil((rec.until - (Date.now() + jailSkew)) / 60000)); }
+  function jpost(body) {
+    return fetch(JAILAPI, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (x) { if (!x.ok) { var jm = document.getElementById('jmsg'); if (jm) jm.textContent = x.j.error || 'Impossible'; } return fetchJail(); })
+      .catch(function () { var jm = document.getElementById('jmsg'); if (jm) jm.textContent = 'Hors connexion : réessaie dans un instant.'; });
+  }
+  function fetchJail() {
+    return fetch(JAILAPI, { cache: 'no-store' }).then(function (r) { if (!r.ok) throw new Error('http'); return r.json(); })
+      .then(function (d) { jailSkew = (d.now || Date.now()) - Date.now(); JAIL = { bilge: d.bilge || null, lele: d.lele || null }; renderJail(); })
+      .catch(function () {});
+  }
+  function renderJail() {
+    var box = document.getElementById('jailband'), ov = document.getElementById('jailOv'); if (!box) return;
+    var busy = document.activeElement && box.contains(document.activeElement) && document.activeElement.tagName === 'INPUT';
+    box.textContent = '';
+    var h = mkel('h2', '', 'Prison'); box.appendChild(h);
+    if (!me) {
+      box.appendChild(mkel('p', 'jtxt', 'Qui es-tu ? (pour pouvoir mettre l\u2019autre au cachot)'));
+      var who = mkel('div', 'jme'); ['bilge', 'lele'].forEach(function (w) { who.appendChild(btn(NAMES[w], function () { me = w; try { localStorage.setItem('bbl-me', me); } catch (e) {} renderJail(); renderShop(); })); }); box.appendChild(who);
+    } else {
+      var o = oth(me), rec = JAIL[o], mine = JAIL[me];
+      if (mine) box.appendChild(mkel('p', 'jtxt', 'Tu es en prison.'));
+      else if (rec) {
+        box.appendChild(mkel('p', 'jtxt', NAMES[o] + ' est en prison (encore ' + jmin(rec) + ' min).'));
+        if (rec.by === me) box.appendChild(btn('Libérer ' + NAMES[o], function () { jpost({ action: 'free', by: me, who: o }); }));
+      } else {
+        box.appendChild(mkel('p', 'jtxt', NAMES[o] + ' t\u2019énerve ? Mets-' + (o === 'lele' ? 'le' : 'la') + ' au cachot : plus rien ne marche pour ' + (o === 'lele' ? 'lui' : 'elle') + ' (1 h max).'));
+        var jb = btn('Mettre ' + NAMES[o] + ' en prison', function () { jpost({ action: 'jail', by: me, who: o }); }); jb.className = 'danger'; box.appendChild(jb);
+      }
+      box.appendChild(mkel('p', 'shopmsg', '')).id = 'jmsg';
+    }
+    var jailedMe = me && JAIL[me];
+    ov.hidden = !jailedMe; document.body.classList.toggle('jailed', !!jailedMe);
+    if (jailedMe) {
+      document.getElementById('jailText').textContent = NAMES[jailedMe.by] + ' t\u2019a mis au cachot. Tu ne peux plus rien faire pour le moment (encore ' + jmin(jailedMe) + ' min au maximum). Il faut attendre que ' + NAMES[jailedMe.by] + ' te libère.';
+      var fc = document.getElementById('jailFace'); if (fc) { var fx = fc.getContext('2d'); fx.clearRect(0, 0, 16, 18); head(fx, me, 'low', 0, 0, true); }
+    }
+  }
+  setInterval(function () { if (!document.hidden) renderJail(); }, 20000);
   function renderCoins() {
     var c = { bilge: 0, lele: 0 };
     if (shopState) c = { bilge: shopState.balance.bilge, lele: shopState.balance.lele };
     else Object.keys(days).forEach(function (k) { var e = days[k]; if (e[0]) c.bilge += 20; if (e[1]) c.lele += 20; });
     var tot = c.bilge + c.lele;
     document.getElementById('coinTotal').textContent = tot;
+    var cm = document.getElementById('coinMini'); if (cm) cm.textContent = tot + ' pièces';
     document.getElementById('coinLbl').textContent = 'pièces au total';
     document.getElementById('coinWho').textContent = 'Bibi ' + c.bilge + ' · Lélé ' + c.lele + ' — 20 pièces par jour où l\u2019on répond';
     if (coinShown >= 0 && tot > coinShown) { var el = document.querySelector('.purse .coin'); el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); }
@@ -1583,7 +1659,7 @@ dialog#logDlg::backdrop { background: rgba(10, 4, 16, .72); }
   function poll() {
     if (document.hidden || !vm) return;
     flush().then(function () {
-      fetchMonth(vm.y, vm.m); fetchShop();
+      fetchMonth(vm.y, vm.m); fetchShop(); fetchJail();
       var c = parseKey(cur);
       if (c.getFullYear() !== vm.y || c.getMonth() !== vm.m) fetchMonth(c.getFullYear(), c.getMonth());
     });
@@ -1676,9 +1752,11 @@ dialog#logDlg::backdrop { background: rgba(10, 4, 16, .72); }
   }
   function badgeTile(b, on) {
     var d = document.createElement('div'); d.className = 'badge ' + (on ? 'on' : 'off');
-    var cv = document.createElement('canvas'); cv.width = 16; cv.height = 16; cv.setAttribute('aria-hidden', 'true'); ICONS[b.id](cv.getContext('2d'));
-    var n = document.createElement('b'); n.textContent = b.name;
-    var t = document.createElement('span'); t.textContent = on ? 'Obtenu ce mois-ci' : b.desc;
+    var cv = document.createElement('canvas'); cv.width = 16; cv.height = 16; cv.setAttribute('aria-hidden', 'true');
+    if (on) ICONS[b.id](cv.getContext('2d'));
+    else { var qc = cv.getContext('2d'), Q = ['.####.', '#....#', '....#.', '...#..', '..#...', '......', '..#...']; Q.forEach(function (row, j) { for (var i = 0; i < 6; i++) if (row.charAt(i) === '#') R(qc, 5 + i, 4 + j, 1, 1, '#8a6aa8'); }); }
+    var n = document.createElement('b'); n.textContent = on ? b.name : '???';
+    var t = document.createElement('span'); t.textContent = on ? 'Obtenu ce mois-ci : ' + b.desc : 'Badge mystère';
     d.appendChild(cv); d.appendChild(n); d.appendChild(t); return d;
   }
   function renderBadges() {
@@ -1687,19 +1765,19 @@ dialog#logDlg::backdrop { background: rgba(10, 4, 16, .72); }
     box.textContent = '';
     var h = document.createElement('h2'); h.textContent = 'Badges du mois'; box.appendChild(h);
     var note = document.createElement('p'); note.className = 'note';
-    note.textContent = 'Calculés d’après les réponses validées de ' + (function () { try { return label.toLocaleDateString('fr-CH', { month: 'long', year: 'numeric' }); } catch (e) { return ''; } })() + '. Ils changent avec le mois affiché plus haut.';
+    note.textContent = 'Calculés d’après les réponses validées de ' + (function () { try { return label.toLocaleDateString('fr-CH', { month: 'long', year: 'numeric' }); } catch (e) { return ''; } })() + '. Ils changent avec le mois affiché plus haut. Les badges se révèlent quand on les gagne…';
     box.appendChild(note);
     var groups = [['Bibi', 0, 'bilge'], ['Lélé', 1, 'lele']];
     groups.forEach(function (gp) {
       var st = personStats(ks, gp[1]), solo = BADGES.filter(function (b) { return b.who === 'solo'; });
       var won = solo.filter(function (b) { return b.test(st); }).length;
-      var h3 = document.createElement('h3'); h3.textContent = gp[0]; var sm = document.createElement('small'); sm.textContent = won + '/' + solo.length + ' badges · ' + st.n + ' réponse' + (st.n > 1 ? 's' : ''); h3.appendChild(sm); box.appendChild(h3);
+      var h3 = document.createElement('h3'); h3.textContent = gp[0]; var sm = document.createElement('small'); sm.textContent = (won ? won + ' découvert' + (won > 1 ? 's' : '') : 'rien de découvert') + ' · ' + st.n + ' réponse' + (st.n > 1 ? 's' : ''); h3.appendChild(sm); box.appendChild(h3);
       var grid = document.createElement('div'); grid.className = 'bgrid';
       solo.slice().sort(function (a, b) { return (b.test(st) ? 1 : 0) - (a.test(st) ? 1 : 0); }).forEach(function (b) { grid.appendChild(badgeTile(b, b.test(st))); });
       box.appendChild(grid);
     });
     var ds = duoStats(ks), duo = BADGES.filter(function (b) { return b.who === 'duo'; });
-    var h3d = document.createElement('h3'); h3d.textContent = 'Bibi & Lélé'; var sd = document.createElement('small'); sd.textContent = duo.filter(function (b) { return b.test(ds); }).length + '/' + duo.length + ' badges'; h3d.appendChild(sd); box.appendChild(h3d);
+    var h3d = document.createElement('h3'); h3d.textContent = 'Bibi & Lélé'; var sd = document.createElement('small'); sd.textContent = (function (n) { return n ? n + ' découvert' + (n > 1 ? 's' : '') : 'rien de découvert'; })(duo.filter(function (b) { return b.test(ds); }).length); h3d.appendChild(sd); box.appendChild(h3d);
     var gd = document.createElement('div'); gd.className = 'bgrid';
     duo.forEach(function (b) { gd.appendChild(badgeTile(b, b.test(ds))); });
     box.appendChild(gd);
@@ -1709,6 +1787,9 @@ dialog#logDlg::backdrop { background: rgba(10, 4, 16, .72); }
   // Pour ajouter une mise à jour : une entrée en haut de la liste (la plus récente d'abord).
   var CHANGELOG = [
     { date: '2026-10-29', title: 'Jeudi 29 octobre 2026', items: [
+      'Prison : une bande permet de mettre l’autre au cachot (1 h maximum). Écran à barreaux, plus rien ne marche pour lui ; seul celui qui l’a mis peut le libérer.',
+      'La boutique est repliée au départ (on la déplie d’un clic).',
+      'Les badges sont cachés : des cases « ??? » qui se révèlent quand on les gagne.',
       'Mise en page par sections colorées : humeurs en rose, boutique en orange, statistiques en bleu, badges en vert.',
       'La cagnotte, la boutique, le placard et l’envoi/réception de pièces sont regroupés dans une seule section.',
       'Un seul bouton pour valider, puis modifier son choix (le jour même).',

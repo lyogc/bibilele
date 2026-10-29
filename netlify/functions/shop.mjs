@@ -1,4 +1,5 @@
 import { getStore } from "@netlify/blobs";
+import { jailRecord } from "./jail.mjs";
 
 // Boutique du Baromètre du bonheur.
 // Règle : chaque personne gagne 20 pièces par jour où elle a répondu (compté dans le carnet d'humeurs).
@@ -81,6 +82,7 @@ export default async (req) => {
     if (Number(req.headers.get("content-length") || 0) > 2000) return json({ error: "trop gros" }, 413);
     let b;
     try { b = await req.json(); } catch { return json({ error: "json invalide" }, 400); }
+    if (await jailRecord(b.who || b.from)) return json({ error: "Tu es en prison" }, 423);
     const st = await load();
     const { shop, balance, owned } = st;
     const add = (ev) => shop.set(`ev/${String(Date.now()).padStart(13, "0")}-${Math.random().toString(36).slice(2, 8)}`, JSON.stringify({ ...ev, t: Date.now() }));
