@@ -133,7 +133,7 @@ details[open] > summary .openbtn::before { content: 'Fermer'; }
 .stats { background: var(--card); border: 3px solid var(--wine); padding: 16px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .badges { background: var(--card); border: 3px solid var(--wine); padding: 16px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
 .badges summary h2 { flex: 1; }
-.badges h2 { margin: 0; font-family: var(--font-display); font-weight: 500; font-size: 24px; color: #fff4fb; }
+.badges h2, .trip h2 { margin: 0; font-family: var(--font-display); font-weight: 500; font-size: 24px; color: #fff4fb; }
 .badges h3 { margin: 0; font-family: var(--font-display); font-weight: 500; font-size: 18px; color: #fff4fb; display: flex; align-items: baseline; gap: 10px; }
 .badges h3 small { font: 600 12px var(--font-body); color: var(--violet); letter-spacing: .08em; text-transform: uppercase; }
 .bgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 10px; }
@@ -173,6 +173,14 @@ details[open] > summary .openbtn::before { content: 'Fermer'; }
 .sec { border-color: var(--acc) !important; box-shadow: inset 0 6px 0 var(--acc); background: color-mix(in srgb, var(--acc) 9%, var(--card)) !important; padding-top: 22px !important; }
 .sec > h2, .sec .shop-top h2, .sec .stats-head h2, .sec summary h2 { color: var(--acc) !important; }
 .sec-hum { --acc: #f06ea0; } .sec-shop { --acc: #ffb347; } .sec-stats { --acc: #5cb8ee; } .sec-badges { --acc: #86d86f; }
+.sec-trip { --acc: #3fc8b8; }
+.cities { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+.cities button { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 8px; min-height: 84px; }
+.cities canvas { width: 64px; height: 36px; image-rendering: pixelated; }
+.trip-bar { height: 12px; border: 2px solid var(--acc); background: var(--plum); }
+.trip-bar i { display: block; height: 100%; background: var(--acc); }
+.trip-msg { margin: 0; color: var(--lav); font-size: 14px; }
+.trip-past { margin: 0; padding-left: 18px; color: var(--lav); font-size: 13px; }
 .who.sec { padding-top: 22px; }
 .who.sec h3 { color: var(--acc); }
 .shop .purse { border: 2px solid color-mix(in srgb, var(--acc) 55%, var(--wine)); background: var(--plum); }
@@ -265,6 +273,8 @@ dialog#logDlg::backdrop { background: rgba(10, 4, 16, .72); }
   <section class="pickers" id="pickers"></section>
 
   <section class="jailband sec sec-jail" id="jailband" aria-label="Punitions"></section>
+
+  <details class="trip sec sec-trip" id="tripBox"><summary class="shop-sum"><h2>Voyages</h2><span class="openbtn" aria-hidden="true"></span></summary><div class="shop-in" id="trip"></div></details>
 
   <details class="shop sec sec-shop" id="shop">
     <summary class="shop-sum"><h2>Boutique</h2><span class="sum-coins" id="coinMini"></span><span class="openbtn" aria-hidden="true"></span></summary>
@@ -1328,6 +1338,102 @@ dialog#logDlg::backdrop { background: rgba(10, 4, 16, .72); }
   var state = { bilge: 0, lele: 0 };
 
   function kind() { return kindFor(state.bilge, state.lele, cur); }
+
+  /* ---------- voyages : 4 villes, 3 météos (pluie / normale / soleil) ---------- */
+  var CITYNAME = { paris: 'Paris', rome: 'Rome', newyork: 'New York', istanbul: 'Istanbul' };
+  var TRAVEL = { today: '', thresh: 10, count: 0, trip: null, trips: [], mine: null, voted: { bilge: false, lele: false } };
+  function tripFor(day) { for (var i = TRAVEL.trips.length - 1; i >= 0; i--) { var q = TRAVEL.trips[i]; if (day >= q.start && day <= q.end) return q; } return null; }
+  function cityWeather(s) { if (!s.bilge || !s.lele) return 'normal'; var n = s.bilge + s.lele; return n <= 5 ? 'rain' : n <= 7 ? 'normal' : 'sun'; }
+  function hexMix(a, b, f) {
+    function p(h, i) { return parseInt(h.substr(1 + i * 2, 2), 16); }
+    var o = '#'; for (var i = 0; i < 3; i++) { var v = Math.round(p(a, i) * (1 - f) + p(b, i) * f); o += (v < 16 ? '0' : '') + v.toString(16); }
+    return o;
+  }
+  function drawCity(city, t, s, m) {
+    var wx = cityWeather(s), rainy = wx === 'rain', sunny = wx === 'sun';
+    function T(c) { return rainy ? hexMix(c, '#2e2c4a', 0.5) : sunny ? hexMix(c, '#ffffff', 0.06) : hexMix(c, '#aab4d0', 0.14); }
+    sky(rainy ? [['#40405e', 0, 20], ['#50506e', 20, 40], ['#64648a', 40, 62], ['#7c7c9c', 62, 90]]
+      : sunny ? [['#3a9ee6', 0, 20], ['#5cb4ee', 20, 40], ['#86cbf4', 40, 62], ['#b4e0f8', 62, 90]]
+      : [['#8fa6d0', 0, 20], ['#a8bbdc', 20, 40], ['#c4d0e8', 40, 62], ['#dde5f2', 62, 90]]);
+    if (sunny) sunDisc(30, 10, t);
+    var ci;
+    for (ci = 0; ci < (rainy ? 9 : 5); ci++) cloud(drift(t, ci * 46, 3 + (ci % 3)), -34 + (ci % 4) * 13, rainy ? 1.4 : 1, rainy ? '#5a5a78' : '#ffffff', rainy ? '#464662' : '#dde6f5');
+    function bld(x, w, h, col, roof, win, flat) {
+      R(g, x, 90 - h, w, h, T(col));
+      if (roof) { if (flat) R(g, x, 90 - h - 2, w, 2, T(roof)); else { R(g, x - 1, 90 - h - 4, w + 2, 4, T(roof)); R(g, x + 2, 90 - h - 7, w - 4, 3, T(roof)); } }
+      var lit = rainy || (wx === 'normal' && (x * 7) % 5 === 0);
+      for (var yy = 90 - h + 5; yy < 86; yy += 7) for (var xx = x + 2; xx < x + w - 2; xx += 5) R(g, xx, yy, 2, 3, lit && ((xx + yy) % 3 === 0) ? '#ffe49a' : T(win));
+    }
+    var X;
+    if (city === 'paris') {
+      var row = [[-26, 24, 34], [-1, 22, 40], [22, 20, 32], [44, 24, 38], [190, 22, 36], [213, 24, 42]];
+      row.forEach(function (q) { bld(q[0], q[1], q[2], '#ecdcb8', '#6a7280', '#8a9ab4'); });
+      // tour Eiffel
+      var ex = 148, top = -16, col = T('#6f604f'), hl = T('#8d7d68');
+      for (var y = top; y < 90; y++) {
+        var u = (y - top) / (90 - top), hw = Math.round(2 + 21 * Math.pow(u, 2.1));
+        if (y > 72) { R(g, ex - hw, y, 3, 1, col); R(g, ex + hw - 3, y, 3, 1, col); }
+        else { R(g, ex - hw, y, 3, 1, col); R(g, ex + hw - 3, y, 3, 1, col); if ((y - top) % 8 === 0) R(g, ex - hw, y, hw * 2, 1, hl); if ((y - top) % 8 === 4) { R(g, ex - hw + 3, y, Math.max(1, hw - 3), 1, hl); R(g, ex + 1, y, Math.max(1, hw - 3), 1, hl); } }
+      }
+      R(g, ex - 9, 36, 19, 3, col); R(g, ex - 14, 62, 29, 3, col); R(g, ex, top - 7, 1, 7, col);
+      R(g, ex - 7, 80, 15, 2, col);
+    } else if (city === 'rome') {
+      [[-26, 26, 26], [2, 22, 20], [26, 20, 28], [200, 24, 24], [225, 20, 30]].forEach(function (q) { bld(q[0], q[1], q[2], '#e0a878', '#b0603c', '#8a5a40'); });
+      var cx0 = 96, cw = 100, topc = 46;
+      R(g, cx0, topc, cw, 90 - topc, T('#dcb98a')); R(g, cx0 + cw - 30, topc, 30, 90 - topc, T('#c59d6c'));
+      R(g, cx0 + cw - 28, topc - 8, 28, 8, T('#dcb98a'));
+      for (var r = 0; r < 3; r++) for (X = cx0 + 4; X < cx0 + cw - 4; X += 7) R(g, X, topc + 5 + r * 13, 4, 8, T('#7a5a40'));
+      R(g, cx0, topc, cw, 2, T('#efd9b0'));
+      for (X = cx0 + 4; X < cx0 + cw - 4; X += 7) R(g, X, topc - 4, 4, 4, T('#7a5a40'));
+      R(g, cx0 + cw - 12, topc - 6, 12, 6, rainy ? '#64648a' : sunny ? '#86cbf4' : '#c4d0e8');
+      pine(24, 94, 40, { t: '#5a3a2a', l: T('#4f8f4a'), h: T('#7fb868'), p: T('#3f6f3a') }); pine(206, 94, 34, { t: '#5a3a2a', l: T('#4f8f4a'), h: T('#7fb868'), p: T('#3f6f3a') });
+    } else if (city === 'newyork') {
+      [[-26, 18, 50, '#6a7690'], [-6, 14, 62, '#7d8aa4'], [10, 20, 44, '#5a6680'], [34, 14, 70, '#8592ac'], [186, 16, 56, '#6a7690'], [204, 18, 66, '#5a6680'], [224, 16, 48, '#7d8aa4']].forEach(function (q) { bld(q[0], q[1], q[2], q[3], '#3a4258', '#c8d6ee', true); });
+      var ex2 = 150;
+      R(g, ex2 - 10, 38, 20, 52, T('#9aa6bc')); R(g, ex2 - 7, 24, 14, 14, T('#a4b0c6')); R(g, ex2 - 4, 12, 8, 12, T('#aeb9ce')); R(g, ex2 - 2, 4, 4, 8, T('#b8c2d4')); R(g, ex2, -10, 1, 14, T('#6a7690'));
+      for (var yy2 = 42; yy2 < 86; yy2 += 5) for (var xx2 = ex2 - 8; xx2 < ex2 + 8; xx2 += 4) R(g, xx2, yy2, 2, 2, (rainy || wx === 'normal') && ((xx2 + yy2) % 3 === 0) ? '#ffe49a' : T('#6a7690'));
+      for (var yy3 = 26; yy3 < 38; yy3 += 4) for (var xx3 = ex2 - 5; xx3 < ex2 + 5; xx3 += 4) R(g, xx3, yy3, 2, 2, T('#6a7690'));
+      var tx = Math.round(((t * 22) % 330) - 60); R(g, tx, 95, 22, 5, '#f6c322'); R(g, tx + 5, 91, 11, 5, '#f6c322'); R(g, tx + 6, 92, 9, 3, rainy ? '#6a7690' : '#bfe0ff'); R(g, tx + 3, 100, 4, 3, '#1d1120'); R(g, tx + 15, 100, 4, 3, '#1d1120');
+    } else {
+      [[-26, 20, 26, '#e8c8b0'], [-4, 18, 32, '#d8a898'], [24, 18, 24, '#e8d8a8'], [200, 20, 30, '#d8a898'], [222, 20, 26, '#e8c8b0']].forEach(function (q) { bld(q[0], q[1], q[2], q[3], '#8a5a4a', '#8a6a5a'); });
+      var hx = 134, body = T('#e6c9a0'), dome = T('#b9c4d2');
+      R(g, hx - 32, 48, 64, 42, body); R(g, hx - 32, 48, 64, 2, T('#f3dfbd'));
+      for (var dy = 0; dy <= 26; dy++) { var hw2 = Math.round(Math.sqrt(26 * 26 - dy * dy)); R(g, hx - hw2, 48 - dy, hw2 * 2, 1, dome); }
+      R(g, hx - 26, 48 - 22, 52, 2, T('#d0d8e2')); R(g, hx, 48 - 31, 1, 6, T('#d8a050'));
+      for (var d3 = 0; d3 <= 12; d3++) { var hw3 = Math.round(Math.sqrt(144 - d3 * d3)); R(g, hx - 44 - hw3 + 12, 62 - d3, hw3 * 2 - 12 + 12, 1, dome); R(g, hx + 44 - 12 - hw3 + 12, 62 - d3, hw3 * 2, 1, dome); }
+      for (X = hx - 28; X < hx + 28; X += 8) R(g, X, 58, 4, 10, T('#8a6a50')); for (X = hx - 28; X < hx + 28; X += 8) R(g, X, 76, 4, 8, T('#8a6a50'));
+      [hx - 46, hx + 40].forEach(function (mx) { R(g, mx, 14, 6, 76, T('#efe0c4')); R(g, mx - 1, 28, 8, 2, T('#d8c4a4')); R(g, mx - 1, 44, 8, 2, T('#d8c4a4')); for (var c4 = 0; c4 < 10; c4++) R(g, mx + 3 - ((c4 + 1) >> 1), 4 + c4, ((c4 + 1) >> 1 << 1) || 1, 1, T('#8a96a8')); R(g, mx + 3, -2, 1, 6, T('#8a96a8')); });
+    }
+    // trottoir, bordure, route
+    R(g, -DX, 90, W, 10, T('#c9c0b6')); for (X = -DX; X < W; X += 14) R(g, X, 90, 1, 10, T('#b0a79e')); R(g, -DX, 100, W, 2, T('#8f877f'));
+    R(g, -DX, 102, W, 6, T('#4a4a58')); for (X = -DX; X < W; X += 20) R(g, X + ((t * 6) % 20) * 0, 105, 10, 1, T('#d9d9c8'));
+    // réverbères
+    [10, 190].forEach(function (lx) { R(g, lx, 56, 2, 36, T('#2f2f3d')); R(g, lx - 3, 54, 8, 3, T('#2f2f3d')); R(g, lx - 2, 57, 6, 2, (rainy || wx === 'normal') ? '#ffe49a' : T('#d8d8c8')); });
+    flock(t, 3, -6, rainy ? '#2a2a3d' : '#3a3a4d', 40);
+    // les deux touristes se promènent
+    var sox = Math.round(Math.sin(t * 0.35) * 22), sph = t * 1.6; CREW = sox; g.save(); g.translate(sox, 0);
+    var bb = Math.sin(sph * 6.283) > 0 ? -1 : 0, bl = Math.sin((sph + 0.5) * 6.283) > 0 ? -1 : 0;
+    if (rainy) {
+      var ucx = 88;
+      actor('bilge', 70, HY + bb, m.bilge, { legs: 'walk', ph: sph, L: [-1, 9], R: [ucx - 83, 0] });
+      actor('lele', 106, HY + bl, m.lele, { legs: 'walk', ph: sph + 0.5, L: [ucx - 108, 0], R: [1, 9] });
+      R(g, ucx, 59, 1, 28, '#d8c8e8'); umbrella(ucx, 47, 26, 12, '#3b7fd6', '#5a9af0', '#2a5ab0');
+    } else if (sunny) {
+      actor('bilge', 70, HY + bb, m.bilge, { legs: 'walk', ph: sph, L: [-3, -9], R: [3, -9] });
+      actor('lele', 106, HY + bl, m.lele, { legs: 'walk', ph: sph + 0.5, L: [-3, -9], R: [3, -9] });
+    } else {
+      actor('bilge', 70, HY + bb, m.bilge, { legs: 'walk', ph: sph, L: [-1, 9], R: [1, 9] });
+      actor('lele', 106, HY + bl, m.lele, { legs: 'walk', ph: sph + 0.5, L: [-1, 9], R: [1, 9] });
+      // valises
+      [[56, '#c8402f'], [124, '#2f6fb0']].forEach(function (q) { R(g, q[0], 96, 9, 8, q[1]); R(g, q[0] + 2, 93, 5, 3, '#3a2a30'); R(g, q[0], 99, 9, 1, 'rgba(0,0,0,.25)'); R(g, q[0] + 1, 104, 2, 1, '#1d1120'); R(g, q[0] + 6, 104, 2, 1, '#1d1120'); });
+    }
+    g.restore();
+    if (rainy) {
+      g.globalAlpha = 0.3; R(g, -DX, -DY, W, 108 + DY, '#1a1830'); g.globalAlpha = 1;
+      rain(t, 170, -DX, W - DX, -DY, 94, function (x, y) { return Math.abs(x - (88 + sox)) <= 26 && y >= 47; });
+    }
+  }
+
   function kindFor(a, b, dayKey) {
     if (!a || !b) return 'wait';
     if (Math.abs(a - b) >= 3) return 'comfort';
@@ -1349,8 +1455,9 @@ dialog#logDlg::backdrop { background: rgba(10, 4, 16, .72); }
       bilge: state.bilge ? MOODNAMES[state.bilge - 1] : 'neutral',
       lele: state.lele ? MOODNAMES[state.lele - 1] : 'neutral'
     };
-    var k = kind();
+    var k = kind(), tp = tripFor(cur);
     g.globalAlpha = 1; CREW = 0;
+    if (tp) { drawCity(tp.city, t, state, m); g.globalAlpha = 1; drawPets('city', t); CREW = 0; return; }
     if (k === 'wait') drawWait(t, state, m);
     else if (k === 'storm') drawRain(t, state, m, true);
     else if (k === 'rain') drawRain(t, state, m);
@@ -1395,6 +1502,12 @@ dialog#logDlg::backdrop { background: rgba(10, 4, 16, .72); }
       level = state.bilge + state.lele - 1;
     } else {
       title = TEXTS[k][0]; cap = TEXTS[k][1]; level = state.bilge + state.lele - 1;
+    }
+    var trp = tripFor(cur);
+    if (trp) {
+      var cw = cityWeather(state);
+      title = 'Voyage à ' + CITYNAME[trp.city];
+      cap = cw === 'rain' ? 'Il pleut, mais on partage le parapluie.' : cw === 'sun' ? 'Grand soleil : la ville est à vous !' : 'Balade tranquille, valises à la main.';
     }
     if (period === 'pm') {
       title = title.replace('ce matin', 'cet après-midi').replace('Qui s\u2019est levé du bon pied ?', 'Et cet après-midi ?').replace("Qui s'est levé du bon pied ?", 'Et cet après-midi ?');
@@ -1604,6 +1717,61 @@ dialog#logDlg::backdrop { background: rgba(10, 4, 16, .72); }
       .then(function (d) { jailSkew = (d.now || Date.now()) - Date.now(); JAIL = { bilge: d.bilge || null, lele: d.lele || null }; renderJail(); })
       .catch(function () {});
   }
+
+  var TRAVELAPI = '/api/travel', tripSig = '';
+  var CITYICON = { paris: ['#8aa8d8', '#6f604f'], rome: ['#c8d6ee', '#dcb98a'], newyork: ['#8aa8d8', '#7d8aa4'], istanbul: ['#c8d6ee', '#8a96a8'] };
+  function cityIcon(c) {
+    var cv = document.createElement('canvas'); cv.width = 32; cv.height = 18; var q = cv.getContext('2d');
+    function r(x, y, w, h, col) { q.fillStyle = col; q.fillRect(x, y, w, h); }
+    var p = CITYICON[c]; r(0, 0, 32, 18, p[0]); r(0, 15, 32, 3, '#9a9288');
+    if (c === 'paris') { for (var y = 1; y < 15; y++) { var hw = Math.round(1 + 7 * Math.pow(y / 14, 2)); r(16 - hw, y, 1, 1, p[1]); r(16 + hw - 1, y, 1, 1, p[1]); } r(10, 8, 12, 1, p[1]); r(8, 12, 16, 1, p[1]); }
+    else if (c === 'rome') { r(6, 5, 20, 10, p[1]); for (var x = 8; x < 24; x += 4) r(x, 7, 2, 4, '#7a5a40'); r(6, 5, 20, 1, '#efd9b0'); }
+    else if (c === 'newyork') { r(5, 6, 6, 9, p[1]); r(21, 4, 6, 11, '#5a6680'); r(13, 3, 6, 12, '#a8b4cc'); r(15, 0, 2, 3, '#a8b4cc'); }
+    else { r(10, 8, 12, 7, '#dcb98a'); r(11, 4, 10, 4, p[1]); r(6, 2, 2, 13, '#efe0c4'); r(24, 2, 2, 13, '#efe0c4'); r(6, 0, 2, 2, p[1]); r(24, 0, 2, 2, p[1]); }
+    return cv;
+  }
+  function fetchTravel() {
+    return fetch(TRAVELAPI + '?who=' + (me || ''), { cache: 'no-store' }).then(function (r) { if (!r.ok) throw new Error('http'); return r.json(); })
+      .then(function (d) {
+        var before = JSON.stringify(TRAVEL.trips);
+        TRAVEL.today = d.today; TRAVEL.thresh = d.thresh; TRAVEL.count = d.count; TRAVEL.trip = d.trip; TRAVEL.trips = d.trips || []; TRAVEL.mine = d.mine; TRAVEL.voted = d.voted || TRAVEL.voted;
+        renderTravel(); if (before !== JSON.stringify(TRAVEL.trips)) { readout(); }
+      }).catch(function () {});
+  }
+  function votePost(city) {
+    if (!me) return;
+    fetch(TRAVELAPI, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ who: me, city: city }) })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (x) { var m = document.getElementById('tripmsg'); if (!x.ok && m) m.textContent = x.j.error || 'Impossible'; return fetchTravel(); })
+      .catch(function () { var m = document.getElementById('tripmsg'); if (m) m.textContent = 'Hors connexion : réessaie dans un instant.'; });
+  }
+  function renderTravel() {
+    var box = document.getElementById('trip'); if (!box) return;
+    var sig = JSON.stringify([TRAVEL, me]); if (sig === tripSig) return; tripSig = sig;
+    box.textContent = '';
+    var t = TRAVEL.trip, fr = function (k) { return fmt(parseKey(k), { weekday: 'long', day: 'numeric', month: 'long' }); };
+    if (t) {
+      var started = TRAVEL.today >= t.start;
+      box.appendChild(mkel('p', 'trip-msg', (started ? 'En voyage à ' : 'Départ demain pour ') + CITYNAME[t.city] + ' ! ' + (started ? 'Retour le ' + fr(addDaysKey(t.end, 1)) + '.' : 'Du ' + fr(t.start) + ' au ' + fr(t.end) + '.') + (t.drawn ? ' Égalité : le sort a décidé.' : '')));
+    } else {
+      box.appendChild(mkel('p', 'trip-msg', 'Votez en secret pour la prochaine destination. Quand ' + TRAVEL.thresh + ' votes sont réunis, vous partez 2 jours.'));
+      var bar = mkel('div', 'trip-bar'); var fill = mkel('i'); fill.style.width = Math.min(100, TRAVEL.count / TRAVEL.thresh * 100) + '%'; bar.appendChild(fill); box.appendChild(bar);
+      box.appendChild(mkel('p', 'trip-msg', TRAVEL.count + '/' + TRAVEL.thresh + ' votes · Bibi : ' + (TRAVEL.voted.bilge ? 'a voté aujourd’hui' : 'pas encore voté') + ' · Lélé : ' + (TRAVEL.voted.lele ? 'a voté aujourd’hui' : 'pas encore voté')));
+      if (!me) box.appendChild(mkel('p', 'trip-msg', 'Choisis qui tu es dans « Punitions » pour voter.'));
+      else {
+        var grid = mkel('div', 'cities');
+        ['paris', 'rome', 'newyork', 'istanbul'].forEach(function (c) {
+          var b = btn('', function () { votePost(c); }, false, TRAVEL.mine === c); b.appendChild(cityIcon(c)); b.appendChild(mkel('span', '', CITYNAME[c])); b.setAttribute('aria-pressed', TRAVEL.mine === c ? 'true' : 'false'); grid.appendChild(b);
+        });
+        box.appendChild(grid);
+        box.appendChild(mkel('p', 'trip-msg', TRAVEL.mine ? 'Ton vote du jour : ' + CITYNAME[TRAVEL.mine] + ' (tu peux le changer aujourd’hui).' : 'Ton vote du jour : pas encore.'));
+      }
+    }
+    var m = mkel('p', 'trip-msg'); m.id = 'tripmsg'; box.appendChild(m);
+    var past = TRAVEL.trips.filter(function (q) { return q.end < TRAVEL.today; });
+    if (past.length) { var ul = mkel('ul', 'trip-past'); past.slice(-5).reverse().forEach(function (q) { ul.appendChild(mkel('li', '', CITYNAME[q.city] + ' · ' + fr(q.start))); }); box.appendChild(ul); }
+  }
+  function addDaysKey(k, n) { var d = parseKey(k); d.setDate(d.getDate() + n); return ymd(d); }
   function renderJail() {
     var box = document.getElementById('jailband'), ov = document.getElementById('jailOv'); if (!box) return;
     var busy = document.activeElement && box.contains(document.activeElement) && document.activeElement.tagName === 'INPUT';
@@ -1784,7 +1952,7 @@ dialog#logDlg::backdrop { background: rgba(10, 4, 16, .72); }
   function poll() {
     if (document.hidden || !vm) return;
     flush().then(function () {
-      fetchMonth(vm.y, vm.m); fetchShop(); fetchJail();
+      fetchMonth(vm.y, vm.m); fetchShop(); fetchJail(); fetchTravel();
       var c = parseKey(cur);
       if (c.getFullYear() !== vm.y || c.getMonth() !== vm.m) fetchMonth(c.getFullYear(), c.getMonth());
     });
@@ -1911,6 +2079,8 @@ dialog#logDlg::backdrop { background: rgba(10, 4, 16, .72); }
   // Pour ajouter une mise à jour : une entrée en haut de la liste (la plus récente d'abord).
   var CHANGELOG = [
     { date: '2026-10-29', title: 'Jeudi 29 octobre 2026', items: [
+      'Voyages : vote secret entre 4 villes (Paris, Rome, New York, Istanbul), départ à 10 votes, 2 jours sur place avec la météo du duo.',
+      'Un animal acheté ou offert apparaît tout de suite à côté de son maître dans toutes les scènes.',
       'Punitions : on choisit où envoyer l’autre — prison, cuisine (à la plonge) ou coin de la honte (bonnet d’âne). Même blocage pour les trois, avec un écran animé différent.',
       'Sorts : dans la boutique, des potions (cochon, chèvre, grenouille, poule) transforment la tête de l’autre en animal pendant 1 h ; l’antidote annule le sort.',
       'Statistiques, badges et boutique ont chacun un bouton « Ouvrir / Fermer ».',

@@ -78,6 +78,13 @@ async function load() {
   return { shop, balance, owned, equipped, events, curses };
 }
 
+// Un objet acheté ou reçu est porté tout de suite si l'emplacement est libre (le chat apparaît dans les décors sans passer par le placard).
+async function autoWear(shop, equipped, who, item) {
+  const slot = CATALOG[item]?.slot;
+  if (!slot || equipped[who][slot]) return;
+  await shop.set("eq/" + who, JSON.stringify({ ...equipped[who], [slot]: item }));
+}
+
 const other = (w) => (w === "bilge" ? "lele" : "bilge");
 const clean = (s) => String(s || "").replace(/[\u0000-\u001f<>]/g, "").slice(0, 80);
 
@@ -108,6 +115,7 @@ export default async (req) => {
       if (owned[b.who].includes(b.item)) return json({ error: "Tu l'as déjà" }, 409);
       if (balance[b.who] < it.price) return json({ error: "Pas assez de pièces" }, 402);
       await add({ type: "buy", who: b.who, item: b.item });
+      await autoWear(shop, st.equipped, b.who, b.item);
       return json({ ok: true });
     }
     if (b.action === "gift") {
@@ -117,6 +125,7 @@ export default async (req) => {
       if (owned[to].includes(b.item)) return json({ error: "Il/elle l'a déjà" }, 409);
       if (balance[b.from] < it.price) return json({ error: "Pas assez de pièces" }, 402);
       await add({ type: "gift", from: b.from, to, item: b.item, msg: clean(b.msg) });
+      await autoWear(shop, st.equipped, to, b.item);
       return json({ ok: true });
     }
     if (b.action === "send") {
