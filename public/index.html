@@ -121,8 +121,8 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
 .inbox { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
 .inbox li { padding-left: 10px; border-left: 3px solid var(--magenta); }
 .stats { background: var(--card); border: 3px solid var(--wine); padding: 16px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
-.badges, .changelog { background: var(--card); border: 3px solid var(--wine); padding: 16px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
-.badges h2, .changelog h2 { margin: 0; font-family: var(--font-display); font-weight: 500; font-size: 24px; color: #fff4fb; }
+.badges { background: var(--card); border: 3px solid var(--wine); padding: 16px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.badges h2 { margin: 0; font-family: var(--font-display); font-weight: 500; font-size: 24px; color: #fff4fb; }
 .badges h3 { margin: 0; font-family: var(--font-display); font-weight: 500; font-size: 18px; color: #fff4fb; display: flex; align-items: baseline; gap: 10px; }
 .badges h3 small { font: 600 12px var(--font-body); color: var(--violet); letter-spacing: .08em; text-transform: uppercase; }
 .bgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 10px; }
@@ -133,6 +133,7 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
 .badge.on { border-color: var(--sun); }
 .badge.off canvas { filter: grayscale(1) brightness(.45); }
 .badge.off b { color: var(--violet); }
+.changelog { display: flex; flex-direction: column; gap: 12px; }
 .changelog details { border-left: 3px solid var(--magenta); padding-left: 12px; }
 .changelog summary { cursor: pointer; font-weight: 600; color: #fff4fb; }
 .changelog ul { margin: 8px 0 4px; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
@@ -157,6 +158,27 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
 .facts li { padding-left: 14px; position: relative; max-width: 62ch; }
 .facts li::before { content: ""; position: absolute; left: 0; top: .6em; width: 6px; height: 6px; background: var(--magenta); }
 .facts b { color: #fff4fb; }
+.sec { border-color: var(--acc) !important; box-shadow: inset 0 6px 0 var(--acc); background: color-mix(in srgb, var(--acc) 9%, var(--card)) !important; padding-top: 22px !important; }
+.sec > h2, .sec .shop-top h2, .sec .stats-head h2 { color: var(--acc) !important; }
+.sec-hum { --acc: #f06ea0; } .sec-shop { --acc: #ffb347; } .sec-stats { --acc: #5cb8ee; } .sec-badges { --acc: #86d86f; }
+.who.sec { padding-top: 22px; }
+.who.sec h3 { color: var(--acc); }
+.shop .purse { border: 2px solid color-mix(in srgb, var(--acc) 55%, var(--wine)); background: var(--plum); }
+.shop button[aria-pressed="true"], .shop button.on { background: color-mix(in srgb, var(--acc) 35%, var(--plum)); border-color: var(--acc); }
+.shop button:hover:not(:disabled) { border-color: var(--acc); }
+.badge.on { border-color: var(--acc); }
+.foot { display: flex; justify-content: center; padding: 4px 0 8px; }
+button.linkbtn { background: transparent; border: 0; color: var(--violet); font: 600 14px var(--font-body); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; padding: 8px 12px; }
+button.linkbtn:hover { color: #fff4fb; }
+dialog#logDlg { background: var(--card); color: var(--lav); border: 3px solid var(--magenta); padding: 0; width: min(560px, calc(100vw - 24px)); max-height: 82vh; }
+dialog#logDlg::backdrop { background: rgba(10, 4, 16, .72); }
+.dlg-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 16px; border-bottom: 2px solid var(--wine); position: sticky; top: 0; background: var(--card); }
+.dlg-head h2 { margin: 0; font-family: var(--font-display); font-weight: 500; font-size: 22px; color: #fff4fb; }
+.dlg-body { padding: 14px 16px 18px; overflow: auto; max-height: calc(82vh - 64px); }
+.dlg-x { background: var(--plum); border: 2px solid var(--wine); color: var(--lav); font: 600 14px var(--font-body); min-height: 34px; padding: 4px 12px; cursor: pointer; }
+.dlg-x:hover { border-color: var(--magenta); }
+.validate.done { background: var(--plum); border-color: var(--sun); color: var(--sun); opacity: 1; }
+.validate.done:not(:disabled):hover { background: var(--wine); }
 @media (prefers-reduced-motion: reduce) { button.mood { transition: none; } }
 </style>
 </head>
@@ -192,13 +214,7 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
 
   <section class="pickers" id="pickers"></section>
 
-  <section class="purse" aria-label="Cagnotte">
-    <div class="coin" aria-hidden="true"></div>
-    <div class="purse-text"><b id="coinTotal">0</b> <span id="coinLbl">pièce dans la cagnotte</span>
-      <small id="coinWho"></small></div>
-  </section>
-
-  <section class="shop" id="shop" aria-label="Boutique">
+  <section class="shop sec sec-shop" id="shop" aria-label="Boutique">
     <div class="shop-top">
       <h2>Boutique</h2>
       <div class="me">Je suis
@@ -206,17 +222,22 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
         <button type="button" data-me="lele" aria-pressed="false">Lélé</button>
       </div>
     </div>
+    <div class="purse" aria-label="Cagnotte">
+      <div class="coin" aria-hidden="true"></div>
+      <div class="purse-text"><b id="coinTotal">0</b> <span id="coinLbl">pièce dans la cagnotte</span>
+        <small id="coinWho"></small></div>
+    </div>
     <div class="tabs" id="shopTabs">
       <button type="button" data-tab="shop" aria-pressed="true">Boutique</button>
       <button type="button" data-tab="closet" aria-pressed="false">Mon placard</button>
-      <button type="button" data-tab="send" aria-pressed="false">Envoyer</button>
+      <button type="button" data-tab="send" aria-pressed="false">Envoyer / recevoir</button>
     </div>
     <div id="shopBody"></div>
     <p class="shopmsg" id="shopMsg" aria-live="polite"></p>
     <ul class="inbox" id="inbox"></ul>
   </section>
 
-  <section class="stats" aria-label="Statistiques">
+  <section class="stats sec sec-stats" aria-label="Statistiques">
     <div class="stats-head">
       <h2>Statistiques du mois</h2>
       <div class="monthnav">
@@ -231,12 +252,13 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
     <div class="legend" id="legend"></div>
     <ul class="facts" id="facts"></ul>
   </section>
-  <section class="badges" id="badges" aria-label="Badges du mois"></section>
+  <section class="badges sec sec-badges" id="badges" aria-label="Badges du mois"></section>
 
-  <section class="changelog" aria-label="Journal des mises à jour">
-    <h2>Journal des mises à jour</h2>
-    <div id="changelog"></div>
-  </section>
+  <div class="foot"><button type="button" class="linkbtn" id="logOpen">Journal des mises à jour</button></div>
+  <dialog id="logDlg" aria-labelledby="logTitle">
+    <div class="dlg-head"><h2 id="logTitle">Journal des mises à jour</h2><button type="button" class="dlg-x" id="logClose">Fermer</button></div>
+    <div class="dlg-body"><div class="changelog" id="changelog"></div></div>
+  </dialog>
 </main>
 
 <script>
@@ -1298,7 +1320,7 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
   var pickers = document.getElementById('pickers');
   var buttons = { bilge: [], lele: [] }, vbtn = {}, ubtn = {}, vmsg = {}, boxes = {}, draft = {};
   ['bilge', 'lele'].forEach(function (who) {
-    var box = document.createElement('div'); box.className = 'who';
+    var box = document.createElement('div'); box.className = 'who sec sec-hum';
     var h = document.createElement('h3'); h.textContent = NAMES[who] + ', ton humeur ce matin ?'; box.appendChild(h);
     var row = document.createElement('div'); row.className = 'moods'; box.appendChild(row);
     for (var v = 1; v <= 5; v++) (function (v) {
@@ -1312,11 +1334,9 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
       row.appendChild(b); buttons[who].push(b);
     })(v);
     var vb = document.createElement('button'); vb.type = 'button'; vb.className = 'validate'; vb.textContent = 'Choisis ton humeur';
-    vb.disabled = true; vb.addEventListener('click', function () { validate(who); });
-    var ub = document.createElement('button'); ub.type = 'button'; ub.className = 'unlock'; ub.textContent = 'Modifier mon choix'; ub.hidden = true;
-    ub.addEventListener('click', function () { unvalidate(who); });
+    vb.disabled = true; vb.addEventListener('click', function () { if (isLocked(cur, who)) unvalidate(who); else validate(who); });
     var vm2 = document.createElement('div'); vm2.className = 'vmsg'; vm2.setAttribute('aria-live', 'polite');
-    box.appendChild(vb); box.appendChild(ub); box.appendChild(vm2); vbtn[who] = vb; ubtn[who] = ub; vmsg[who] = vm2; boxes[who] = box;
+    box.appendChild(vb); box.appendChild(vm2); vbtn[who] = vb; ubtn[who] = {}; vmsg[who] = vm2; boxes[who] = box;
     pickers.appendChild(box);
   });
 
@@ -1325,9 +1345,10 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
       var lk = isLocked(cur, who), dv = draft[cur + who] || 0;
       buttons[who].forEach(function (b, i) { b.setAttribute('aria-pressed', (lk ? state[who] : dv) === i + 1 ? 'true' : 'false'); });
       boxes[who].classList.toggle('locked', lk);
-      vbtn[who].disabled = lk || !dv;
-      ubtn[who].hidden = !(lk && cur === todayKey);
-      vbtn[who].textContent = lk ? 'Choix validé ✓' : (dv ? 'Valider mon choix : ' + LABELS[dv - 1] : 'Choisis ton humeur');
+      var canEdit = lk && cur === todayKey;
+      vbtn[who].disabled = lk ? !canEdit : !dv;
+      vbtn[who].classList.toggle('done', lk);
+      vbtn[who].textContent = lk ? (canEdit ? 'Choix validé ✓ · Modifier' : 'Choix validé ✓') : (dv ? 'Valider mon choix : ' + LABELS[dv - 1] : 'Choisis ton humeur');
     });
     readout(); draw(now()); renderStats();
   }
@@ -1652,6 +1673,12 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
   /* ---------- journal des mises à jour ---------- */
   // Pour ajouter une mise à jour : une entrée en haut de la liste (la plus récente d'abord).
   var CHANGELOG = [
+    { date: '2026-10-29', title: 'Jeudi 29 octobre 2026', items: [
+      'Mise en page par sections colorées : humeurs en rose, boutique en orange, statistiques en bleu, badges en vert.',
+      'La cagnotte, la boutique, le placard et l’envoi/réception de pièces sont regroupés dans une seule section.',
+      'Un seul bouton pour valider, puis modifier son choix (le jour même).',
+      'Le journal des mises à jour s’ouvre en pop-up depuis le lien en bas de page.'
+    ] },
     { date: '2026-10-28', title: 'Mercredi 28 octobre 2026', items: [
       'Premières versions : choix d’humeur avec nos portraits, paysages en pixel art qui changent selon la somme des deux humeurs.',
       '5 humeurs, 11 univers (dont le câlin quand l’écart est grand) et une jauge sur 9.',
@@ -1750,6 +1777,12 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
     })();
   }
 })();
+  (function () {
+    var dlg = document.getElementById('logDlg'), o = document.getElementById('logOpen'), c = document.getElementById('logClose');
+    o.addEventListener('click', function () { if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', ''); });
+    c.addEventListener('click', function () { if (dlg.close) dlg.close(); else dlg.removeAttribute('open'); });
+    dlg.addEventListener('click', function (e) { if (e.target === dlg && dlg.close) dlg.close(); });
+  })();
 </script>
 </body>
 </html>
