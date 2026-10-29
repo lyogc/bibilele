@@ -54,9 +54,9 @@ button.dbtn:disabled { opacity: .35; cursor: default; }
 button.dbtn:not(:disabled):hover, button.today:hover, input.dayinput:hover { border-color: var(--magenta); }
 input.dayinput { color-scheme: dark; }
 
-.frame { max-width: 792px; margin: 20px auto 0; border: 4px solid var(--lav); box-shadow: 0 6px 0 var(--wine); background: var(--ink); line-height: 0; }
+.frame { max-width: min(100%, calc(72vh * 16 / 9)); margin: 16px auto 0; border: 4px solid var(--lav); box-shadow: 0 6px 0 var(--wine); background: var(--ink); line-height: 0; }
 #stage { width: 100%; height: auto; aspect-ratio: 16 / 9; display: block; object-fit: cover; object-position: 50% 85%; image-rendering: pixelated; }
-@media (max-width: 840px) { .frame { max-width: none; margin: 0; border-width: 0 0 4px; } }
+@media (max-width: 700px) { .frame { max-width: none; margin: 0; border-width: 0 0 4px; } }
 
 .readout { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 24px; }
 .readout .text { flex: 1 1 280px; min-width: 0; }
@@ -102,8 +102,10 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
 .shop-sum::-webkit-details-marker { display: none; }
 .shop-sum h2 { flex: 1; }
 .sum-coins { font-weight: 700; color: #ffd34e; }
-.chev { width: 10px; height: 10px; border-right: 3px solid var(--acc); border-bottom: 3px solid var(--acc); transform: rotate(45deg); margin: 0 4px 4px 0; transition: transform .15s; }
-.shop[open] .chev { transform: rotate(-135deg); margin: 4px 4px 0 0; }
+.openbtn { flex: none; background: var(--plum); border: 2px solid var(--acc); color: #fff4fb; font: 700 14px var(--font-body); padding: 5px 14px; min-height: 34px; display: inline-flex; align-items: center; }
+.openbtn::before { content: 'Ouvrir'; }
+details[open] > summary .openbtn::before { content: 'Fermer'; }
+.shop-sum:hover .openbtn { background: color-mix(in srgb, var(--acc) 35%, var(--plum)); }
 .shop-in { display: flex; flex-direction: column; gap: 14px; margin-top: 14px; }
 .shop h2 { margin: 0; font-family: var(--font-display); font-weight: 500; font-size: 24px; color: #fff4fb; }
 .shop-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
@@ -130,6 +132,7 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
 .inbox li { padding-left: 10px; border-left: 3px solid var(--magenta); }
 .stats { background: var(--card); border: 3px solid var(--wine); padding: 16px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .badges { background: var(--card); border: 3px solid var(--wine); padding: 16px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.badges summary h2 { flex: 1; }
 .badges h2 { margin: 0; font-family: var(--font-display); font-weight: 500; font-size: 24px; color: #fff4fb; }
 .badges h3 { margin: 0; font-family: var(--font-display); font-weight: 500; font-size: 18px; color: #fff4fb; display: flex; align-items: baseline; gap: 10px; }
 .badges h3 small { font: 600 12px var(--font-body); color: var(--violet); letter-spacing: .08em; text-transform: uppercase; }
@@ -167,7 +170,7 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
 .facts li::before { content: ""; position: absolute; left: 0; top: .6em; width: 6px; height: 6px; background: var(--magenta); }
 .facts b { color: #fff4fb; }
 .sec { border-color: var(--acc) !important; box-shadow: inset 0 6px 0 var(--acc); background: color-mix(in srgb, var(--acc) 9%, var(--card)) !important; padding-top: 22px !important; }
-.sec > h2, .sec .shop-top h2, .sec .stats-head h2 { color: var(--acc) !important; }
+.sec > h2, .sec .shop-top h2, .sec .stats-head h2, .sec summary h2 { color: var(--acc) !important; }
 .sec-hum { --acc: #f06ea0; } .sec-shop { --acc: #ffb347; } .sec-stats { --acc: #5cb8ee; } .sec-badges { --acc: #86d86f; }
 .who.sec { padding-top: 22px; }
 .who.sec h3 { color: var(--acc); }
@@ -253,7 +256,7 @@ dialog#logDlg::backdrop { background: rgba(10, 4, 16, .72); }
   <section class="jailband sec sec-jail" id="jailband" aria-label="Prison"></section>
 
   <details class="shop sec sec-shop" id="shop">
-    <summary class="shop-sum"><h2>Boutique</h2><span class="sum-coins" id="coinMini"></span><span class="chev" aria-hidden="true"></span></summary>
+    <summary class="shop-sum"><h2>Boutique</h2><span class="sum-coins" id="coinMini"></span><span class="openbtn" aria-hidden="true"></span></summary>
     <div class="shop-in">
     <div class="me">Je suis
         <button type="button" data-me="bilge" aria-pressed="false">Bibi</button>
@@ -290,7 +293,7 @@ dialog#logDlg::backdrop { background: rgba(10, 4, 16, .72); }
     <div class="legend" id="legend"></div>
     <ul class="facts" id="facts"></ul>
   </section>
-  <section class="badges sec sec-badges" id="badges" aria-label="Badges du mois"></section>
+  <details class="badges sec sec-badges" id="badgesBox"><summary class="shop-sum"><h2>Badges du mois</h2><span class="openbtn" aria-hidden="true"></span></summary><div class="shop-in" id="badges"></div></details>
 
   <div id="jailOv" class="jailov" hidden role="alertdialog" aria-live="assertive" aria-labelledby="jailTitle">
     <div class="jailbars" aria-hidden="true"></div>
@@ -1764,7 +1767,6 @@ dialog#logDlg::backdrop { background: rgba(10, 4, 16, .72); }
     var box = document.getElementById('badges'); if (!box || !vm) return;
     var ks = monthKeys(vm.y, vm.m), label = new Date(vm.y, vm.m, 1);
     box.textContent = '';
-    var h = document.createElement('h2'); h.textContent = 'Badges du mois'; box.appendChild(h);
     var note = document.createElement('p'); note.className = 'note';
     note.textContent = 'Calculés d’après les réponses validées de ' + (function () { try { return label.toLocaleDateString('fr-CH', { month: 'long', year: 'numeric' }); } catch (e) { return ''; } })() + '. Ils changent avec le mois affiché plus haut. Les badges se révèlent quand on les gagne…';
     box.appendChild(note);
@@ -1788,7 +1790,7 @@ dialog#logDlg::backdrop { background: rgba(10, 4, 16, .72); }
   // Pour ajouter une mise à jour : une entrée en haut de la liste (la plus récente d'abord).
   var CHANGELOG = [
     { date: '2026-10-29', title: 'Jeudi 29 octobre 2026', items: [
-      'Sur grand écran, l’image est dézoomée : elle a la même largeur que le reste de la page.',
+      'Sur grand écran, l’image reste grande mais dézoomée : on voit toute la scène. Boutique et badges ont un bouton « Ouvrir / Fermer ».',
       'Prison : une bande permet de mettre l’autre au cachot (1 h maximum). Écran à barreaux, plus rien ne marche pour lui ; seul celui qui l’a mis peut le libérer.',
       'La boutique est repliée au départ (on la déplie d’un clic).',
       'Les badges sont cachés : des cases « ??? » qui se révèlent quand on les gagne.',
