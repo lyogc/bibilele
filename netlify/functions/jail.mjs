@@ -1,11 +1,12 @@
 import { getStore } from "@netlify/blobs";
 
-// Prison : l'un met l'autre au cachot, l'autre ne peut plus rien faire (réponses, boutique…).
+// Punition : l'un envoie l'autre en prison, à la cuisine ou au coin de la honte ; l'autre ne peut plus rien faire (réponses, boutique…).
 // Il est libéré par celui qui l'a mis, ou automatiquement au bout d'une heure.
 // GET  /api/jail                           -> { bilge: null | {by, at, until}, lele: ..., now }
-// POST /api/jail {action:"jail"|"free", by, who}
+// POST /api/jail {action:"jail"|"free", by, who, place}   place : prison | cuisine | honte
 
 const WHO = ["bilge", "lele"];
+const PLACES = ["prison", "cuisine", "honte"];
 const HOUR = 60 * 60 * 1000;
 const json = (body, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
@@ -37,8 +38,9 @@ export default async (req) => {
     if (b.action === "jail") {
       if (await jailRecord(b.by)) return json({ error: "Tu es en prison, tu ne peux rien faire" }, 423);
       if (await jailRecord(b.who)) return json({ error: "Déjà en prison" }, 409);
+      const place = PLACES.includes(b.place) ? b.place : "prison";
       const at = Date.now();
-      await prison().set(b.who, JSON.stringify({ by: b.by, at, until: at + HOUR }));
+      await prison().set(b.who, JSON.stringify({ by: b.by, at, until: at + HOUR, place }));
       return json({ ok: true });
     }
     if (b.action === "free") {

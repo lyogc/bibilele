@@ -198,6 +198,12 @@ details[open] > summary .openbtn::before { content: 'Fermer'; }
 .jailbars { position: absolute; inset: 0; background: repeating-linear-gradient(90deg, #6b7287 0 14px, transparent 14px 64px); opacity: .85; pointer-events: none; }
 .jailcard { position: relative; background: var(--card); border: 3px solid #9aa3b8; padding: 22px 20px; max-width: 380px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .jailcard canvas { width: 96px; height: 108px; image-rendering: pixelated; }
+.jailcard canvas#jailScene { width: 288px; height: 192px; max-width: 100%; }
+.jailcard canvas[hidden] { display: none; }
+.jailov:not([data-place=prison]) .jailbars { display: none; }
+.jailov[data-place=cuisine] { background: rgba(40, 22, 12, .93); }
+.jailov[data-place=honte] { background: rgba(26, 14, 40, .95); }
+.jailband .jmenu { display: flex; gap: 8px; flex-wrap: wrap; }
 .jailcard h2 { margin: 0; font-family: var(--font-display); font-size: 24px; color: #fff4fb; }
 .jailcard p { margin: 0; }
 body.jailed { overflow: hidden; }
@@ -258,7 +264,7 @@ dialog#logDlg::backdrop { background: rgba(10, 4, 16, .72); }
   </div>
   <section class="pickers" id="pickers"></section>
 
-  <section class="jailband sec sec-jail" id="jailband" aria-label="Prison"></section>
+  <section class="jailband sec sec-jail" id="jailband" aria-label="Punitions"></section>
 
   <details class="shop sec sec-shop" id="shop">
     <summary class="shop-sum"><h2>Boutique</h2><span class="sum-coins" id="coinMini"></span><span class="openbtn" aria-hidden="true"></span></summary>
@@ -307,6 +313,7 @@ dialog#logDlg::backdrop { background: rgba(10, 4, 16, .72); }
     <div class="jailbars" aria-hidden="true"></div>
     <div class="jailcard">
       <canvas id="jailFace" width="16" height="18" aria-hidden="true"></canvas>
+      <canvas id="jailScene" width="96" height="64" aria-hidden="true" hidden></canvas>
       <h2 id="jailTitle">Tu es en prison !</h2>
       <p id="jailText"></p>
     </div>
@@ -1550,6 +1557,41 @@ dialog#logDlg::backdrop { background: rgba(10, 4, 16, .72); }
   var coinShown = -1, shopState = null;
   /* ---------- prison ---------- */
   var JAIL = { bilge: null, lele: null }, JAILAPI = '/api/jail', jailSkew = 0;
+  var PLACE = {
+    prison: ['Prison', 'Tu es en prison !', ' t\u2019a mis au cachot.'],
+    cuisine: ['Cuisine', 'À la plonge !', ' t\u2019a envoyé à la cuisine : l\u2019évier déborde de vaisselle.'],
+    honte: ['Coin de la honte', 'Au coin, face au mur !', ' t\u2019a mis au coin de la honte, bonnet d\u2019âne sur la tête.']
+  }, jailMenu = false;
+  function drawPunish(place, who, t) {
+    var cv = document.getElementById('jailScene'), c = cv.getContext('2d'), k = colors(who), hair = who === 'bilge' ? '#3a2219' : '#2c1d17', i;
+    c.clearRect(0, 0, 96, 64);
+    if (place === 'cuisine') {
+      R(c, 0, 0, 96, 44, '#efe6d4'); for (i = 8; i < 44; i += 8) R(c, 0, i, 96, 1, '#d8ccb4'); for (i = 0; i < 96; i += 8) R(c, i, 0, 1, 44, '#e4d9c3');
+      R(c, 3, 3, 28, 15, '#a8764a'); R(c, 4, 4, 13, 13, '#c08a58'); R(c, 18, 4, 12, 13, '#c08a58'); R(c, 65, 3, 28, 15, '#a8764a'); R(c, 66, 4, 13, 13, '#c08a58'); R(c, 80, 4, 12, 13, '#c08a58');
+      R(c, 0, 44, 96, 20, '#8a5a3a'); R(c, 0, 44, 96, 3, '#d8c8a8');
+      for (i = 0; i < 6; i++) R(c, 6 + (i % 2), 42 - i * 2, 14 - (i % 2) * 2, 2, i % 2 ? '#ffffff' : '#dbe8ff');
+      R(c, 74, 40, 12, 2, '#ffffff'); R(c, 75, 38, 10, 2, '#dbe8ff');
+      R(c, 33, 41, 30, 5, '#b8c2cc'); R(c, 34, 42, 28, 3, '#8fa0b0');
+      var sw = Math.round(Math.sin(t * 7) * 3);
+      R(c, 40, 14, 0, 0, '#000'); head(c, who, 'low', 40, 13, false);
+      R(c, 43, 27, 10, 10, k.top); R(c, 44, 27, 8, 11, '#fff6ee'); R(c, 42, 28, 2, 9, k.top); R(c, 52, 28, 2, 9, k.top);
+      R(c, 43 + sw, 38, 2, 3, k.skin); R(c, 51 + sw, 38, 2, 3, k.skin); R(c, 47 + sw, 37, 3, 2, '#ffffff');
+      R(c, 47, 32, 2, 9, '#9aa5b0'); R(c, 47, 32, 6, 2, '#9aa5b0');
+      for (i = 0; i < 5; i++) { var by = 40 - ((t * 14 + i * 7) % 26), bx = 38 + i * 5 + Math.round(Math.sin(t * 3 + i) * 2); R(c, bx, by, 2, 2, '#cfe8ff'); R(c, bx, by, 1, 1, '#ffffff'); }
+    } else {
+      R(c, 0, 0, 48, 48, '#7a5a8a'); R(c, 48, 0, 48, 48, '#5a3a6a'); R(c, 47, 0, 2, 48, '#2a1a38'); R(c, 0, 48, 96, 16, '#3a2a48'); R(c, 0, 48, 96, 1, '#4a3a58');
+      var x = 33 + (Math.floor(t * 1.6) % 2), y = 20;
+      R(c, x + 4, y + 20, 3, 8, k.pants); R(c, x + 9, y + 20, 3, 8, k.pants); R(c, x + 3, y + 28, 4, 2, '#1d1120'); R(c, x + 9, y + 28, 4, 2, '#1d1120');
+      R(c, x + 3, y + 13, 10, 9, k.top); R(c, x + 1, y + 14, 2, 8, k.top); R(c, x + 13, y + 14, 2, 8, k.top);
+      R(c, x + 2, y + 2, 12, 12, hair); R(c, x + 6, y + 12, 4, 2, k.skin);
+      for (i = 0; i < 10; i++) { var w = 2 + i; R(c, x + 8 - (w >> 1), y - 8 + i, w, 1, '#fff6ee'); } R(c, x + 6, y - 5, 2, 2, '#d6453d'); R(c, x + 9, y - 2, 2, 2, '#d6453d'); R(c, x + 4, y + 0, 8, 1, '#d6453d');
+    }
+  }
+  setInterval(function () {
+    var ov = document.getElementById('jailOv'), pl = ov && ov.getAttribute('data-place');
+    if (!ov || ov.hidden || !pl || pl === 'prison' || !me) return;
+    drawPunish(pl, me, performance.now() / 1000);
+  }, 120);
   function jmin(rec) { return Math.max(1, Math.ceil((rec.until - (Date.now() + jailSkew)) / 60000)); }
   function jpost(body) {
     return fetch(JAILAPI, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
@@ -1566,7 +1608,7 @@ dialog#logDlg::backdrop { background: rgba(10, 4, 16, .72); }
     var box = document.getElementById('jailband'), ov = document.getElementById('jailOv'); if (!box) return;
     var busy = document.activeElement && box.contains(document.activeElement) && document.activeElement.tagName === 'INPUT';
     box.textContent = '';
-    var h = mkel('h2', '', 'Prison'); box.appendChild(h);
+    var h = mkel('h2', '', 'Punitions'); box.appendChild(h);
     if (!me) {
       box.appendChild(mkel('p', 'jtxt', 'Qui es-tu ? (pour pouvoir mettre l\u2019autre au cachot)'));
       var who = mkel('div', 'jme'); ['bilge', 'lele'].forEach(function (w) { who.appendChild(btn(NAMES[w], function () { me = w; try { localStorage.setItem('bbl-me', me); } catch (e) {} renderJail(); renderShop(); })); }); box.appendChild(who);
@@ -1574,19 +1616,29 @@ dialog#logDlg::backdrop { background: rgba(10, 4, 16, .72); }
       var o = oth(me), rec = JAIL[o], mine = JAIL[me];
       if (mine) box.appendChild(mkel('p', 'jtxt', 'Tu es en prison.'));
       else if (rec) {
-        box.appendChild(mkel('p', 'jtxt', NAMES[o] + ' est en prison (encore ' + jmin(rec) + ' min).'));
+        box.appendChild(mkel('p', 'jtxt', NAMES[o] + ' est puni' + (o === 'bilge' ? 'e' : '') + ' : ' + (PLACE[rec.place || 'prison'][0]).toLowerCase() + ' (encore ' + jmin(rec) + ' min).'));
         if (rec.by === me) box.appendChild(btn('Libérer ' + NAMES[o], function () { jpost({ action: 'free', by: me, who: o }); }));
       } else {
-        box.appendChild(mkel('p', 'jtxt', NAMES[o] + ' t\u2019énerve ? Mets-' + (o === 'lele' ? 'le' : 'la') + ' au cachot : plus rien ne marche pour ' + (o === 'lele' ? 'lui' : 'elle') + ' (1 h max).'));
-        var jb = btn('Mettre ' + NAMES[o] + ' en prison', function () { jpost({ action: 'jail', by: me, who: o }); }); jb.className = 'danger'; box.appendChild(jb);
+        box.appendChild(mkel('p', 'jtxt', NAMES[o] + ' t\u2019énerve ? Punis-' + (o === 'lele' ? 'le' : 'la') + ' : plus rien ne marche pour ' + (o === 'lele' ? 'lui' : 'elle') + ' (1 h max). Tu choisis où.'));
+        if (!jailMenu) { var jb = btn('Punir ' + NAMES[o] + '…', function () { jailMenu = true; renderJail(); }); jb.className = 'danger'; box.appendChild(jb); }
+        else {
+          var jm = mkel('div', 'jmenu');
+          Object.keys(PLACE).forEach(function (pl) { var pb = btn(PLACE[pl][0], function () { jailMenu = false; jpost({ action: 'jail', by: me, who: o, place: pl }); }); pb.className = 'danger'; jm.appendChild(pb); });
+          jm.appendChild(btn('Annuler', function () { jailMenu = false; renderJail(); })); box.appendChild(jm);
+        }
       }
       box.appendChild(mkel('p', 'shopmsg', '')).id = 'jmsg';
     }
     var jailedMe = me && JAIL[me];
     ov.hidden = !jailedMe; document.body.classList.toggle('jailed', !!jailedMe);
     if (jailedMe) {
-      document.getElementById('jailText').textContent = NAMES[jailedMe.by] + ' t\u2019a mis au cachot. Tu ne peux plus rien faire pour le moment (encore ' + jmin(jailedMe) + ' min au maximum). Il faut attendre que ' + NAMES[jailedMe.by] + ' te libère.';
-      var fc = document.getElementById('jailFace'); if (fc) { var fx = fc.getContext('2d'); fx.clearRect(0, 0, 16, 18); head(fx, me, 'low', 0, 0, true); }
+      var pl = jailedMe.place && PLACE[jailedMe.place] ? jailedMe.place : 'prison';
+      ov.setAttribute('data-place', pl);
+      document.getElementById('jailTitle').textContent = PLACE[pl][1];
+      document.getElementById('jailText').textContent = NAMES[jailedMe.by] + PLACE[pl][2] + ' Tu ne peux plus rien faire pour le moment (encore ' + jmin(jailedMe) + ' min au maximum). Il faut attendre que ' + NAMES[jailedMe.by] + ' te libère.';
+      var fc = document.getElementById('jailFace'), sc = document.getElementById('jailScene');
+      fc.hidden = pl !== 'prison'; sc.hidden = pl === 'prison';
+      if (pl === 'prison') { var fx = fc.getContext('2d'); fx.clearRect(0, 0, 16, 18); head(fx, me, 'low', 0, 0, true); } else drawPunish(pl, me, performance.now() / 1000);
     }
   }
   setInterval(function () { if (!document.hidden) renderJail(); }, 20000);
@@ -1859,6 +1911,7 @@ dialog#logDlg::backdrop { background: rgba(10, 4, 16, .72); }
   // Pour ajouter une mise à jour : une entrée en haut de la liste (la plus récente d'abord).
   var CHANGELOG = [
     { date: '2026-10-29', title: 'Jeudi 29 octobre 2026', items: [
+      'Punitions : on choisit où envoyer l’autre — prison, cuisine (à la plonge) ou coin de la honte (bonnet d’âne). Même blocage pour les trois, avec un écran animé différent.',
       'Sorts : dans la boutique, des potions (cochon, chèvre, grenouille, poule) transforment la tête de l’autre en animal pendant 1 h ; l’antidote annule le sort.',
       'Statistiques, badges et boutique ont chacun un bouton « Ouvrir / Fermer ».',
       'Sur grand écran, l’image reste grande mais dézoomée : on voit toute la scène. Boutique et badges ont un bouton « Ouvrir / Fermer ».',
