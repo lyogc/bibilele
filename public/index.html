@@ -1356,7 +1356,7 @@ dialog#logDlg::backdrop { background: rgba(10, 4, 16, .72); }
       : sunny ? [['#3a9ee6', 0, 20], ['#5cb4ee', 20, 40], ['#86cbf4', 40, 62], ['#b4e0f8', 62, 90]]
       : [['#8fa6d0', 0, 20], ['#a8bbdc', 20, 40], ['#c4d0e8', 40, 62], ['#dde5f2', 62, 90]]);
     if (sunny) sunDisc(30, 10, t);
-    var ci;
+    var ci, late = null;
     for (ci = 0; ci < (rainy ? 9 : 5); ci++) cloud(drift(t, ci * 46, 3 + (ci % 3)), -34 + (ci % 4) * 13, rainy ? 1.4 : 1, rainy ? '#5a5a78' : '#ffffff', rainy ? '#464662' : '#dde6f5');
     function bld(x, w, h, col, roof, win, flat) {
       R(g, x, 90 - h, w, h, T(col));
@@ -1378,35 +1378,102 @@ dialog#logDlg::backdrop { background: rgba(10, 4, 16, .72); }
       R(g, ex - 9, 36, 19, 3, col); R(g, ex - 14, 62, 29, 3, col); R(g, ex, top - 7, 1, 7, col);
       R(g, ex - 7, 80, 15, 2, col);
     } else if (city === 'rome') {
-      [[-26, 26, 26], [2, 22, 20], [26, 20, 28], [200, 24, 24], [225, 20, 30]].forEach(function (q) { bld(q[0], q[1], q[2], '#e0a878', '#b0603c', '#8a5a40'); });
-      var cx0 = 96, cw = 100, topc = 46;
-      R(g, cx0, topc, cw, 90 - topc, T('#dcb98a')); R(g, cx0 + cw - 30, topc, 30, 90 - topc, T('#c59d6c'));
-      R(g, cx0 + cw - 28, topc - 8, 28, 8, T('#dcb98a'));
-      for (var r = 0; r < 3; r++) for (X = cx0 + 4; X < cx0 + cw - 4; X += 7) R(g, X, topc + 5 + r * 13, 4, 8, T('#7a5a40'));
-      R(g, cx0, topc, cw, 2, T('#efd9b0'));
-      for (X = cx0 + 4; X < cx0 + cw - 4; X += 7) R(g, X, topc - 4, 4, 4, T('#7a5a40'));
-      R(g, cx0 + cw - 12, topc - 6, 12, 6, rainy ? '#64648a' : sunny ? '#86cbf4' : '#c4d0e8');
-      pine(24, 94, 40, { t: '#5a3a2a', l: T('#4f8f4a'), h: T('#7fb868'), p: T('#3f6f3a') }); pine(206, 94, 34, { t: '#5a3a2a', l: T('#4f8f4a'), h: T('#7fb868'), p: T('#3f6f3a') });
+      [[-26, 24, 30, '#e0a878'], [-2, 20, 22, '#d89a6a'], [210, 22, 30, '#e8b888'], [231, 18, 22, '#d89a6a']].forEach(function (q) { bld(q[0], q[1], q[2], q[3], '#b0603c', '#8a5a40'); });
+      var stone = T('#e2c08e'), shd = T('#c9a470'), drk = T('#9a7a4c'), inn = T('#b58f5c'), arc = T('#5e402a'), lit = T('#f2dfb4');
+      var cl = 64, ct = 34, steps = [[150, 162, 44], [162, 174, 54], [174, 186, 64], [186, 198, 74]];
+      function topAt(x) { for (var i = 0; i < steps.length; i++) if (x >= steps[i][0] && x < steps[i][1]) return steps[i][2]; return x < 150 ? ct : 90; }
+      R(g, 150, 52, 46, 38, inn);
+      for (X = 150; X < 196; X += 6) { R(g, X, 56 + (X % 12 ? 0 : 3), 3, 34, drk); }
+      R(g, cl, ct, 150 - cl, 90 - ct, stone); R(g, cl, ct, 5, 90 - ct, shd); R(g, cl, ct, 2, 90 - ct, drk);
+      steps.forEach(function (q) { R(g, q[0], q[2], q[1] - q[0], 90 - q[2], stone); R(g, q[0], q[2], q[1] - q[0], 1, lit); R(g, q[1] - 2, q[2], 2, 90 - q[2], shd); });
+      R(g, cl, ct, 150 - cl, 1, lit);
+      var tiers = [[76, 13, 1], [63, 10, 0], [51, 10, 0]];
+      for (X = cl + 8; X < 196; X += 6) {
+        var tp = topAt(X);
+        tiers.forEach(function (q) {
+          if (q[0] < tp + 2) return;
+          R(g, X, q[0], 4, q[1] - 1, arc); R(g, X, q[0], 1, 1, stone); R(g, X + 3, q[0], 1, 1, stone);
+          R(g, X - 2, q[0] - 2, 8, 1, lit);
+        });
+        if (tp <= 36) { R(g, X, 38, 3, 4, arc); R(g, X - 2, 36, 8, 1, lit); }
+      }
+      // pins parasols + cyprès
+      function ppine(x, base, h) {
+        R(g, x - 1, base - h, 2, h, '#5a3a2a'); R(g, x - 2, base - 2, 4, 2, '#5a3a2a');
+        for (var dy = -5; dy <= 3; dy++) { var hw = Math.round(15 * Math.sqrt(Math.max(0, 1 - Math.pow(dy / 5.5, 2)))); R(g, x - hw, base - h + dy, hw * 2, 1, dy < -1 ? T('#6faa58') : T('#3f7a3a')); }
+        for (var k = 0; k < 6; k++) R(g, x - 12 + k * 5, base - h - 4 + (k % 2) * 2, 2, 1, T('#8cc470'));
+      }
+      ppine(34, 92, 30); ppine(206, 92, 24);
+      [[8, 92, 36], [222, 92, 30]].forEach(function (q) { for (var cy = 0; cy < q[2]; cy++) { var cw2 = Math.max(1, Math.round(3.5 * Math.sin(Math.PI * (cy + 2) / (q[2] + 3)))); R(g, q[0] - cw2, q[1] - cy, cw2 * 2, 1, cy % 5 < 3 ? T('#2f5a2f') : T('#3f7a3a')); } });
     } else if (city === 'newyork') {
-      [[-26, 18, 50, '#6a7690'], [-6, 14, 62, '#7d8aa4'], [10, 20, 44, '#5a6680'], [34, 14, 70, '#8592ac'], [186, 16, 56, '#6a7690'], [204, 18, 66, '#5a6680'], [224, 16, 48, '#7d8aa4']].forEach(function (q) { bld(q[0], q[1], q[2], q[3], '#3a4258', '#c8d6ee', true); });
-      var ex2 = 150;
-      R(g, ex2 - 10, 38, 20, 52, T('#9aa6bc')); R(g, ex2 - 7, 24, 14, 14, T('#a4b0c6')); R(g, ex2 - 4, 12, 8, 12, T('#aeb9ce')); R(g, ex2 - 2, 4, 4, 8, T('#b8c2d4')); R(g, ex2, -10, 1, 14, T('#6a7690'));
-      for (var yy2 = 42; yy2 < 86; yy2 += 5) for (var xx2 = ex2 - 8; xx2 < ex2 + 8; xx2 += 4) R(g, xx2, yy2, 2, 2, (rainy || wx === 'normal') && ((xx2 + yy2) % 3 === 0) ? '#ffe49a' : T('#6a7690'));
-      for (var yy3 = 26; yy3 < 38; yy3 += 4) for (var xx3 = ex2 - 5; xx3 < ex2 + 5; xx3 += 4) R(g, xx3, yy3, 2, 2, T('#6a7690'));
-      var tx = Math.round(((t * 22) % 330) - 60); R(g, tx, 95, 22, 5, '#f6c322'); R(g, tx + 5, 91, 11, 5, '#f6c322'); R(g, tx + 6, 92, 9, 3, rainy ? '#6a7690' : '#bfe0ff'); R(g, tx + 3, 100, 4, 3, '#1d1120'); R(g, tx + 15, 100, 4, 3, '#1d1120');
+      [[-26, 18, 46, '#6a7690'], [-8, 14, 56, '#7d8aa4'], [12, 14, 50, '#5a6680'], [58, 16, 48, '#6a7690'], [78, 14, 58, '#8592ac'], [142, 14, 44, '#5a6680']].forEach(function (q) { bld(q[0], q[1], q[2], q[3], '#3a4258', '#c8d6ee', true); });
+      // Chrysler Building
+      var kx = 40, ks = T('#8e9ab2'), kc = T('#d6deea'), kd = T('#6e7a94');
+      R(g, kx - 8, 44, 16, 46, ks); R(g, kx + 4, 44, 4, 46, kd);
+      for (var wy = 48; wy < 88; wy += 4) for (var wx2 = kx - 6; wx2 < kx + 6; wx2 += 4) R(g, wx2, wy, 2, 2, (rainy || wx === 'normal') && ((wx2 + wy) % 3 === 0) ? '#ffe49a' : kd);
+      for (var ci2 = 0; ci2 < 18; ci2++) { var chw = Math.max(1, Math.round(7 * (1 - ci2 / 19))); R(g, kx - chw, 43 - ci2, chw * 2, 1, ci2 % 3 === 2 ? kd : kc); if (ci2 % 3 === 1 && chw > 2) { R(g, kx - 1, 43 - ci2, 2, 1, kd); } }
+      R(g, kx, 14, 1, 11, kc);
+      // Empire State Building
+      var ex2 = 122, es = T('#aab4c8'), ed = T('#8b97ae');
+      [[-13, 26, 56, 34], [-9, 18, 44, 12], [-6, 12, 32, 12], [-4, 8, 22, 10], [-2, 4, 14, 8], [-1, 2, 8, 6]].forEach(function (q) { R(g, ex2 + q[0], q[2], q[1], q[3], es); R(g, ex2 + q[0] + q[1] - Math.max(2, q[1] >> 2), q[2], Math.max(2, q[1] >> 2), q[3], ed); });
+      R(g, ex2, -8, 1, 16, T('#6a7690'));
+      for (var yy2 = 58; yy2 < 88; yy2 += 4) for (var xx2 = ex2 - 11; xx2 < ex2 + 9; xx2 += 4) R(g, xx2, yy2, 2, 2, (rainy || wx === 'normal') && ((xx2 + yy2) % 3 === 0) ? '#ffe49a' : ed);
+      for (var yy3 = 46; yy3 < 56; yy3 += 4) for (var xx3 = ex2 - 7; xx3 < ex2 + 5; xx3 += 4) R(g, xx3, yy3, 2, 2, ed);
+      if (!sunny) R(g, ex2 - 1, 9, 2, 3, Math.sin(t * 3) > 0 ? '#ffe49a' : '#e8a070');
+      // port + statue de la Liberté
+      var wtr = T('#3f7fb8');
+      R(g, 160, 78, 74, 12, wtr); for (var wi = 0; wi < 9; wi++) R(g, 162 + ((wi * 17 + t * 5) % 68), 80 + (wi % 4) * 3, 5, 1, T('#8fc4ea'));
+      var sx = 194, gr = T('#6fb5a0'), gd = T('#4f8f80'), pd = T('#b8b0a0');
+      R(g, sx - 12, 83, 24, 7, T('#9a9488')); R(g, sx - 8, 70, 16, 14, pd); R(g, sx - 8, 70, 3, 14, T('#cfc8b8')); R(g, sx - 10, 69, 20, 2, T('#a49c8c'));
+      for (var ry = 42; ry < 69; ry++) { var rh = 3 + Math.round((ry - 42) / 27 * 3); R(g, sx - rh, ry, rh * 2, 1, gr); R(g, sx + 1, ry, rh - 1, 1, gd); }
+      R(g, sx - 2, 36, 4, 6, gr); R(g, sx + 1, 36, 1, 6, gd);
+      [[-5, 36, 2], [-3, 33, 3], [0, 31, 3], [3, 33, 3], [5, 36, 2]].forEach(function (q) { R(g, sx + q[0], q[1], 1, q[2], gr); });
+      for (var ak = 0; ak < 16; ak++) R(g, sx - 3 - Math.round(ak * 0.3), 46 - ak, 2, 1, gr);
+      R(g, sx - 10, 28, 4, 3, '#c8a040'); R(g, sx - 9, 23 + (Math.sin(t * 8) > 0 ? 0 : 1), 2, 5, '#ffd34e'); R(g, sx - 9, 25, 2, 2, '#ff9a3c');
+      R(g, sx + 3, 51, 5, 8, gd); R(g, sx + 4, 52, 3, 6, gr);
+      late = function () {
+        var tx = Math.round(((t * 22) % 330) - 60);
+        R(g, tx, 98, 22, 5, '#f6c322'); R(g, tx + 5, 94, 11, 5, '#f6c322'); R(g, tx + 6, 95, 9, 3, rainy ? '#6a7690' : '#bfe0ff'); R(g, tx + 8, 92, 5, 2, '#ffffff'); R(g, tx + 3, 102, 4, 4, '#1d1120'); R(g, tx + 15, 102, 4, 4, '#1d1120');
+        R(g, 150, 93, 4, 6, '#d8403a'); R(g, 149, 95, 6, 2, '#d8403a'); R(g, 151, 92, 2, 1, '#e8a0a0');
+        R(g, 100, 100, 6, 4, '#ff8a3c'); R(g, 101, 101, 4, 1, '#ffffff');
+        for (var pi = 0; pi < 5; pi++) { var py = 99 - pi * 6 - ((t * 7) % 6); R(g, 102 + Math.sin(t * 2 + pi) * 3, py, 3 + (pi % 2), 3, 'rgba(255,255,255,' + (0.5 - pi * 0.08) + ')'); }
+      };
     } else {
-      [[-26, 20, 26, '#e8c8b0'], [-4, 18, 32, '#d8a898'], [24, 18, 24, '#e8d8a8'], [200, 20, 30, '#d8a898'], [222, 20, 26, '#e8c8b0']].forEach(function (q) { bld(q[0], q[1], q[2], q[3], '#8a5a4a', '#8a6a5a'); });
-      var hx = 134, body = T('#e6c9a0'), dome = T('#b9c4d2');
-      R(g, hx - 32, 48, 64, 42, body); R(g, hx - 32, 48, 64, 2, T('#f3dfbd'));
-      for (var dy = 0; dy <= 26; dy++) { var hw2 = Math.round(Math.sqrt(26 * 26 - dy * dy)); R(g, hx - hw2, 48 - dy, hw2 * 2, 1, dome); }
-      R(g, hx - 26, 48 - 22, 52, 2, T('#d0d8e2')); R(g, hx, 48 - 31, 1, 6, T('#d8a050'));
-      for (var d3 = 0; d3 <= 12; d3++) { var hw3 = Math.round(Math.sqrt(144 - d3 * d3)); R(g, hx - 44 - hw3 + 12, 62 - d3, hw3 * 2 - 12 + 12, 1, dome); R(g, hx + 44 - 12 - hw3 + 12, 62 - d3, hw3 * 2, 1, dome); }
-      for (X = hx - 28; X < hx + 28; X += 8) R(g, X, 58, 4, 10, T('#8a6a50')); for (X = hx - 28; X < hx + 28; X += 8) R(g, X, 76, 4, 8, T('#8a6a50'));
-      [hx - 46, hx + 40].forEach(function (mx) { R(g, mx, 14, 6, 76, T('#efe0c4')); R(g, mx - 1, 28, 8, 2, T('#d8c4a4')); R(g, mx - 1, 44, 8, 2, T('#d8c4a4')); for (var c4 = 0; c4 < 10; c4++) R(g, mx + 3 - ((c4 + 1) >> 1), 4 + c4, ((c4 + 1) >> 1 << 1) || 1, 1, T('#8a96a8')); R(g, mx + 3, -2, 1, 6, T('#8a96a8')); });
+      [[-26, 20, 26, '#e8c8b0'], [-4, 16, 30, '#d8a898'], [206, 20, 28, '#d8a898'], [226, 18, 24, '#e8c8b0']].forEach(function (q) { bld(q[0], q[1], q[2], q[3], '#8a5a4a', '#8a6a5a'); });
+      // tour de Galata
+      var gx = 20, gs = T('#cdb594'), gk = T('#a89070');
+      R(g, gx - 7, 38, 14, 52, gs); R(g, gx + 3, 38, 4, 52, gk); R(g, gx - 9, 34, 18, 4, gk); R(g, gx - 8, 31, 16, 3, gs);
+      for (var gi = 0; gi < 14; gi++) { var gw = Math.round(1 + gi * 0.5); R(g, gx - gw, 17 + gi, gw * 2, 1, gi % 4 === 3 ? T('#5a6a80') : T('#6a7a90')); }
+      R(g, gx, 10, 1, 7, T('#6a7a90')); [46, 56, 66, 76].forEach(function (wy2) { R(g, gx - 1, wy2, 2, 5, T('#6a5a48')); });
+      for (X = gx - 6; X < gx + 6; X += 3) R(g, X, 32, 2, 2, T('#6a5a48'));
+      // mosquée : coupoles en cascade
+      var hx = 142, body = T('#e6c9a0'), bsh = T('#cdae82'), dm = T('#aab6c8'), dh = T('#cdd6e2'), gold = '#e8b84a';
+      function dome(cx, by, r, hl) { for (var dy = 0; dy <= r; dy++) { var hw = Math.round(Math.sqrt(r * r - dy * dy)); R(g, cx - hw, by - dy, hw * 2, 1, dm); R(g, cx - hw, by - dy, Math.min(3, hw * 2), 1, hl); } }
+      R(g, hx - 36, 64, 72, 26, body); R(g, hx - 36, 64, 72, 2, T('#f3dfbd')); R(g, hx + 26, 64, 10, 26, bsh);
+      R(g, hx - 22, 50, 44, 14, body); R(g, hx + 14, 50, 8, 14, bsh);
+      dome(hx - 26, 64, 14, dh); dome(hx + 26, 64, 14, dh);
+      dome(hx - 36, 64, 7, dh); dome(hx + 36, 64, 7, dh);
+      R(g, hx - 20, 44, 40, 7, body); for (X = hx - 18; X < hx + 18; X += 5) R(g, X, 46, 2, 4, T('#7a6a58'));
+      dome(hx, 44, 20, dh); R(g, hx - 1, 18, 2, 6, T('#d8a050')); R(g, hx - 1, 15, 3, 3, gold); R(g, hx, 16, 2, 1, dm);
+      for (X = hx - 30; X < hx + 32; X += 6) { R(g, X, 68, 3, 8, T('#7a6a58')); R(g, X, 80, 3, 8, T('#7a6a58')); R(g, X, 67, 3, 1, T('#7a6a58')); R(g, X, 79, 3, 1, T('#7a6a58')); }
+      function minaret(mx, top) {
+        var wd = [1, 1, 3, 3, 3, 3, 5, 5, 5, 5, 5, 5], mc = T('#efe0c4'), mk = T('#d8c4a4');
+        for (var i = 0; i < 12; i++) R(g, mx - (wd[i] >> 1), top + i, wd[i], 1, i < 6 ? T('#8a96a8') : T('#7a8698'));
+        R(g, mx - 3, top + 12, 7, 1, mk);
+        R(g, mx - 2, top + 13, 5, 90 - top - 13, mc); R(g, mx + 1, top + 13, 2, 90 - top - 13, mk);
+        [26, 40].forEach(function (oy) { R(g, mx - 4, top + oy, 9, 2, mk); R(g, mx - 3, top + oy + 2, 7, 1, T('#a89070')); });
+        R(g, mx, top - 4, 1, 4, gold); R(g, mx - 1, top - 4, 1, 1, gold); R(g, mx + 1, top - 4, 1, 1, gold);
+      }
+      minaret(hx - 52, 22); minaret(hx - 41, 6); minaret(hx + 41, 6); minaret(hx + 52, 22);
+      // drapeau turc
+      var px = 222; R(g, px, 54, 1, 36, '#5a5a66'); R(g, px, 52, 2, 2, '#e8b84a');
+      for (var fx = 0; fx < 15; fx++) R(g, px + 1 + fx, 54 + Math.round(Math.sin(t * 5 + fx * 0.5) * 1), 1, 10, '#d8312e');
+      R(g, px + 5, 57, 5, 5, '#ffffff'); R(g, px + 7, 58, 4, 3, '#d8312e'); R(g, px + 11, 58, 1, 3, '#ffffff');
     }
     // trottoir, bordure, route
     R(g, -DX, 90, W, 10, T('#c9c0b6')); for (X = -DX; X < W; X += 14) R(g, X, 90, 1, 10, T('#b0a79e')); R(g, -DX, 100, W, 2, T('#8f877f'));
     R(g, -DX, 102, W, 6, T('#4a4a58')); for (X = -DX; X < W; X += 20) R(g, X + ((t * 6) % 20) * 0, 105, 10, 1, T('#d9d9c8'));
+    if (late) late();
     // réverbères
     [10, 190].forEach(function (lx) { R(g, lx, 56, 2, 36, T('#2f2f3d')); R(g, lx - 3, 54, 8, 3, T('#2f2f3d')); R(g, lx - 2, 57, 6, 2, (rainy || wx === 'normal') ? '#ffe49a' : T('#d8d8c8')); });
     flock(t, 3, -6, rainy ? '#2a2a3d' : '#3a3a4d', 40);
