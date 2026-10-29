@@ -54,8 +54,9 @@ button.dbtn:disabled { opacity: .35; cursor: default; }
 button.dbtn:not(:disabled):hover, button.today:hover, input.dayinput:hover { border-color: var(--magenta); }
 input.dayinput { color-scheme: dark; }
 
-.frame { border-bottom: 4px solid var(--lav); box-shadow: 0 6px 0 var(--wine); background: var(--ink); line-height: 0; }
-#stage { width: 100%; height: min(56.25vw, 62vh); min-height: 200px; display: block; object-fit: cover; object-position: 50% 85%; image-rendering: pixelated; }
+.frame { max-width: 792px; margin: 20px auto 0; border: 4px solid var(--lav); box-shadow: 0 6px 0 var(--wine); background: var(--ink); line-height: 0; }
+#stage { width: 100%; height: auto; aspect-ratio: 16 / 9; display: block; object-fit: cover; object-position: 50% 85%; image-rendering: pixelated; }
+@media (max-width: 840px) { .frame { max-width: none; margin: 0; border-width: 0 0 4px; } }
 
 .readout { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 24px; }
 .readout .text { flex: 1 1 280px; min-width: 0; }
@@ -1787,6 +1788,7 @@ dialog#logDlg::backdrop { background: rgba(10, 4, 16, .72); }
   // Pour ajouter une mise à jour : une entrée en haut de la liste (la plus récente d'abord).
   var CHANGELOG = [
     { date: '2026-10-29', title: 'Jeudi 29 octobre 2026', items: [
+      'Sur grand écran, l’image est dézoomée : elle a la même largeur que le reste de la page.',
       'Prison : une bande permet de mettre l’autre au cachot (1 h maximum). Écran à barreaux, plus rien ne marche pour lui ; seul celui qui l’a mis peut le libérer.',
       'La boutique est repliée au départ (on la déplie d’un clic).',
       'Les badges sont cachés : des cases « ??? » qui se révèlent quand on les gagne.',
