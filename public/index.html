@@ -34,7 +34,9 @@ body {
   line-height: 1.5;
   padding-block: 0 36px;
 }
+.decoc { position: fixed; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
 .wrap {
+  position: relative; z-index: 1;
   max-width: 792px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px;
   padding-top: 24px;
   padding-left: max(16px, env(safe-area-inset-left, 0px));
@@ -242,6 +244,7 @@ dialog#logDlg::backdrop { background: rgba(10, 4, 16, .72); }
   <canvas id="stage" role="img" aria-label="Scène en pixel art de Bilge et Lélé"></canvas>
 </section>
 
+<canvas class="decoc" id="deco" aria-hidden="true"></canvas>
 <main class="wrap">
   <header>
     <span class="eyebrow">Bilge &amp; Lélé</span>
@@ -1801,6 +1804,55 @@ dialog#logDlg::backdrop { background: rgba(10, 4, 16, .72); }
       .catch(function () {});
   }
 
+
+  /* ---------- décor de fond de saison (ton sur ton, très discret) ---------- */
+  (function () {
+    var cv = document.getElementById('deco'); if (!cv || !cv.getContext) return;
+    var cx = cv.getContext('2d');
+    var SPR = {
+      maple: ['.....1.....', '..1..111..1.', '.11.11111.11', '..111111111.', '.1111111111.', '11111111111.', '.1111111111.', '..111111111.', '...1111111..', '.....2......', '.....2......'],
+      acorn: ['.22222.', '2222222', '.11111.', '1111111', '1111111', '.11111.', '..111..', '...1...'],
+      mush: ['...22222...', '.222222222.', '22.222.2222', '22222222222', '.222222222.', '...11111...', '...11111...', '...11111...', '..1111111..'],
+      pumpkin: ['......2......', '...22.2.22...', '.11111121111.', '1111111111111', '1111121211111', '1111121211111', '1111111111111', '.11111111111.', '...1111111...'],
+      oak: ['..1.1.1..', '.1111111.', '..11111..', '.1111111.', '..11111..', '.1111111.', '...111...', '....2....', '....2....']
+    };
+    var SEASON = { autumn: ['maple', 'acorn', 'mush', 'pumpkin', 'oak'] };   // d'autres saisons plus tard
+    function seasonNow() { return 'autumn'; }
+    var C1 = '#38263f', C2 = '#32213a', CL = '#43304e';
+    function sprite(c, name, x, y, k, cols) {
+      var g = SPR[name];
+      for (var j = 0; j < g.length; j++) for (var i = 0; i < g[j].length; i++) {
+        var ch = g[j].charAt(i); if (ch === '.') continue;
+        c.fillStyle = cols ? cols[ch] : (ch === '1' ? C1 : C2); c.fillRect(Math.round(x + i * k), Math.round(y + j * k), k, k);
+      }
+    }
+    var W = 0, H = 0, st = document.createElement('canvas'), leaves = [], anim = 0;
+    function rng(seed) { return function () { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }; }
+    function build() {
+      var dpr = 1; W = cv.width = Math.max(1, window.innerWidth); H = cv.height = Math.max(1, window.innerHeight);
+      st.width = W; st.height = H; var c = st.getContext('2d'); c.clearRect(0, 0, W, H);
+      var names = SEASON[seasonNow()], r = rng(20261106), k = W < 600 ? 3 : 4;
+      var cols = Math.max(3, Math.round(W / 150)), rows = Math.max(3, Math.round(H / 150));
+      for (var gy = 0; gy < rows; gy++) for (var gx = 0; gx < cols; gx++) {
+        var n = names[Math.floor(r() * names.length)];
+        sprite(c, n, (gx + 0.15 + r() * 0.7) * (W / cols), (gy + 0.15 + r() * 0.6) * (H / rows), k);
+      }
+      leaves = []; var cnt = W < 600 ? 5 : 9;
+      for (var i = 0; i < cnt; i++) leaves.push({ x: r() * W, y: r() * H, vy: 8 + r() * 10, ph: r() * 6.28, sw: 10 + r() * 14 });
+    }
+    function frame(ts) {
+      cx.clearRect(0, 0, W, H); cx.drawImage(st, 0, 0);
+      var t = ts / 1000, k = W < 600 ? 3 : 4;
+      for (var i = 0; i < leaves.length; i++) {
+        var L = leaves[i], y = (L.y + t * L.vy) % (H + 60) - 30;
+        sprite(cx, i % 2 ? 'maple' : 'oak', L.x + Math.sin(t * 0.6 + L.ph) * L.sw, y, k, { '1': CL, '2': C2 });
+      }
+    }
+    function loop(ts) { if (!document.hidden) frame(ts); anim = requestAnimationFrame(loop); }
+    var reduce = false; try { reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+    function start() { build(); cancelAnimationFrame(anim); if (reduce) { frame(0); } else { anim = requestAnimationFrame(loop); } }
+    start(); var rt; window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(start, 150); });
+  })();
   var TRAVELAPI = '/api/travel', tripSig = '';
   var CITYICON = { paris: ['#8aa8d8', '#6f604f'], rome: ['#c8d6ee', '#dcb98a'], newyork: ['#8aa8d8', '#7d8aa4'], istanbul: ['#c8d6ee', '#8a96a8'] };
   function cityIcon(c) {
@@ -2178,6 +2230,7 @@ dialog#logDlg::backdrop { background: rgba(10, 4, 16, .72); }
   // Pour ajouter une mise à jour : une entrée en haut de la liste (la plus récente d'abord).
   var CHANGELOG = [
     { date: '2026-10-29', title: 'Jeudi 29 octobre 2026', items: [
+      'Décor d’automne en fond d’écran : feuilles, glands, champignons et citrouilles, en violet ton sur ton, avec quelques feuilles qui tombent doucement.',
       'Citation du jour sous la date : une citation positive différente chaque jour, la même pour vous deux.',
       'Voyages : vote secret entre 4 villes (Paris, Rome, New York, Istanbul), départ à 10 votes, 2 jours sur place avec la météo du duo.',
       'Un animal acheté ou offert apparaît tout de suite à côté de son maître dans toutes les scènes.',
