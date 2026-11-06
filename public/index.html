@@ -43,6 +43,7 @@ body {
 header { display: flex; flex-direction: column; gap: 4px; }
 .eyebrow { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--violet); font-weight: 600; }
 h1 { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: clamp(30px, 7vw, 44px); line-height: 1.05; text-wrap: balance; color: #fff4fb; }
+.badges-more { align-self: flex-start; background: var(--plum); border: 2px solid var(--acc); color: #fff4fb; font: 700 14px var(--font-body); padding: 6px 14px; min-height: 36px; cursor: pointer; }
 .quote { margin: 10px 0 0; padding: 8px 12px; border-left: 3px solid var(--acc, #f06ea0); color: var(--lav); font-size: 14px; line-height: 1.45; font-style: italic; }
 .quote cite { display: block; margin-top: 2px; font-style: normal; font-size: 12px; opacity: .8; }
 .dayrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-top: 4px; }
@@ -2142,6 +2143,7 @@ dialog#logDlg::backdrop { background: rgba(10, 4, 16, .72); }
     var t = document.createElement('span'); t.textContent = on ? 'Obtenu ce mois-ci : ' + b.desc : 'Badge mystère';
     d.appendChild(cv); d.appendChild(n); d.appendChild(t); return d;
   }
+  var badgesAll = false, BADGE_PREVIEW = 4;
   function renderBadges() {
     var box = document.getElementById('badges'); if (!box || !vm) return;
     var ks = monthKeys(vm.y, vm.m), label = new Date(vm.y, vm.m, 1);
@@ -2155,14 +2157,21 @@ dialog#logDlg::backdrop { background: rgba(10, 4, 16, .72); }
       var won = solo.filter(function (b) { return b.test(st); }).length;
       var h3 = document.createElement('h3'); h3.textContent = gp[0]; var sm = document.createElement('small'); sm.textContent = (won ? won + ' découvert' + (won > 1 ? 's' : '') : 'rien de découvert') + ' · ' + st.n + ' réponse' + (st.n > 1 ? 's' : ''); h3.appendChild(sm); box.appendChild(h3);
       var grid = document.createElement('div'); grid.className = 'bgrid';
-      solo.slice().sort(function (a, b) { return (b.test(st) ? 1 : 0) - (a.test(st) ? 1 : 0); }).forEach(function (b) { grid.appendChild(badgeTile(b, b.test(st))); });
+      var srt = solo.slice().sort(function (a, b) { return (b.test(st) ? 1 : 0) - (a.test(st) ? 1 : 0); });
+      (badgesAll ? srt : srt.slice(0, BADGE_PREVIEW)).forEach(function (b) { grid.appendChild(badgeTile(b, b.test(st))); });
       box.appendChild(grid);
     });
     var ds = duoStats(ks), duo = BADGES.filter(function (b) { return b.who === 'duo'; });
     var h3d = document.createElement('h3'); h3d.textContent = 'Bibi & Lélé'; var sd = document.createElement('small'); sd.textContent = (function (n) { return n ? n + ' découvert' + (n > 1 ? 's' : '') : 'rien de découvert'; })(duo.filter(function (b) { return b.test(ds); }).length); h3d.appendChild(sd); box.appendChild(h3d);
     var gd = document.createElement('div'); gd.className = 'bgrid';
-    duo.forEach(function (b) { gd.appendChild(badgeTile(b, b.test(ds))); });
+    var dsrt = duo.slice().sort(function (a, b) { return (b.test(ds) ? 1 : 0) - (a.test(ds) ? 1 : 0); });
+    (badgesAll ? dsrt : dsrt.slice(0, BADGE_PREVIEW)).forEach(function (b) { gd.appendChild(badgeTile(b, b.test(ds))); });
     box.appendChild(gd);
+    var total = BADGES.filter(function (b) { return b.who === 'solo'; }).length * 2 + duo.length, shown = BADGE_PREVIEW * 2 + Math.min(BADGE_PREVIEW, duo.length);
+    var more = document.createElement('button'); more.type = 'button'; more.className = 'badges-more';
+    more.textContent = badgesAll ? 'Réduire' : 'Voir tous les badges (' + (total - shown) + ' de plus)';
+    more.addEventListener('click', function () { badgesAll = !badgesAll; renderBadges(); });
+    box.appendChild(more);
   }
 
   /* ---------- journal des mises à jour ---------- */
