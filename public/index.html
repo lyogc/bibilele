@@ -73,7 +73,7 @@ input.dayinput { color-scheme: dark; }
 .pips { display: flex; gap: 4px; }
 .pip { width: 22px; height: 22px; background: var(--card); border: 2px solid var(--wine); }
 
-.pickers { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 16px; }
+.pickers { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr)); gap: 16px; }
 .who { background: var(--card); border: 3px solid var(--wine); padding: 14px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .who h3 { margin: 0; font-family: var(--font-display); font-weight: 500; font-size: 20px; color: #fff4fb; }
 .moods { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
@@ -82,7 +82,7 @@ button.mood {
   padding: 8px 2px 8px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px;
   font: 600 11px/1.2 var(--font-body); transition: transform .1s;
 }
-button.mood canvas { width: 100%; max-width: 60px; height: auto; aspect-ratio: 16 / 18; image-rendering: pixelated; display: block; }
+button.mood canvas { width: 100%; max-width: 104px; height: auto; aspect-ratio: 1 / 1; image-rendering: pixelated; display: block; }
 button.mood:hover { transform: translateY(-2px); border-color: var(--magenta); }
 button.mood[aria-pressed="true"] { border-color: var(--lav); background: var(--wine); color: #fff4fb; }
 .validate { background: var(--magenta); border: 3px solid var(--lav); color: #fff4fb; font: 700 14px var(--font-body); padding: 8px 12px; min-height: 40px; cursor: pointer; }
@@ -1614,6 +1614,101 @@ dialog#logDlg::backdrop { background: rgba(10, 4, 16, .72); }
   var t0 = performance.now(), last = -1;
   function now() { return reduce ? 0 : (performance.now() - t0) / 1000; }
 
+
+  /* ---------- portraits détaillés (32 px) pour les choix d'humeur ---------- */
+  function portrait(ctx, who, mood) {
+    var N = 32, u = N / 24, g = new Array(N * N), B = who === 'bilge';
+    function shape(f, col, y0, y1) {
+      y0 = y0 == null ? -99 : y0; y1 = y1 == null ? 99 : y1;
+      var ja = Math.max(0, Math.floor(y0 * u) - 1), jb = Math.min(N - 1, Math.ceil(y1 * u) + 1);
+      for (var j = ja; j <= jb; j++) for (var i = 0; i < N; i++) {
+        var x = (i + 0.5) / u, y = (j + 0.5) / u; if (y < y0 || y > y1) continue;
+        if (f(x, y)) g[j * N + i] = col;
+      }
+    }
+    function ell(cx, cy, rx, ry, col, o) { o = o || {}; var x0 = o.x0 == null ? -99 : o.x0, x1 = o.x1 == null ? 99 : o.x1; shape(function (x, y) { return Math.pow((x - cx) / rx, 2) + Math.pow((y - cy) / ry, 2) <= 1 && x >= x0 && x <= x1; }, col, o.y0, o.y1); }
+    function sell(cx, cy, rx, ry, n, col) { shape(function (x, y) { return Math.pow(Math.abs((x - cx) / rx), n) + Math.pow(Math.abs((y - cy) / ry), n) <= 1; }, col); }
+    function rect(x, y, w, h, col) { shape(function (a, b) { return a >= x && a < x + w && b >= y && b < y + h; }, col); }
+    function stamp(x, y, t, col) { shape(function (a, b) { return (a - x) * (a - x) + (b - y) * (b - y) <= (t / 2) * (t / 2); }, col, y - t, y + t); }
+    function line(x0, y0, x1, y1, t, col) {
+      t = Math.max(t, 1 / u); var n = Math.floor(Math.sqrt((x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0)) * u * 3) + 2;
+      for (var k = 0; k <= n; k++) { var f = k / n; stamp(x0 + (x1 - x0) * f, y0 + (y1 - y0) * f, t, col); }
+    }
+    function curve(x0, y0, x1, y1, bend, t, col) {
+      t = Math.max(t, 1 / u); var n = Math.floor(Math.sqrt((x1 - x0) * (x1 - x0) + Math.pow(y1 - y0 + Math.abs(bend) * 2, 2)) * u * 3) + 2;
+      for (var k = 0; k <= n; k++) { var f = k / n; stamp(x0 + (x1 - x0) * f, y0 + (y1 - y0) * f + bend * 4 * f * (1 - f), t, col); }
+    }
+    var E = '#1d1120', WH = '#fff6ee', TEAR = '#7cc4ff', GOLD = '#f2c14e';
+    function eyes(ex, ey, brow, bt, lash) {
+      [-1, 1].forEach(function (sg) {
+        var x = 12 + sg * ex, ix = x - sg * 2.0, ox = x + sg * 2.0, iy = ey - 2.8, oy = ey - 3.0;
+        if (mood === 'sad') { iy -= 1.1; oy += 0.3; } if (mood === 'low') iy -= 0.5; if (mood === 'happy') { iy -= 0.4; oy -= 0.4; }
+        line(ix, iy, ox, oy, bt, brow);
+        if (mood === 'happy') curve(x - 1.8, ey + 0.5, x + 1.8, ey + 0.5, -1.7, 1.0, E);
+        else if (mood === 'sad') { curve(x - 1.7, ey + 0.1, x + 1.7, ey + 0.1, 0.6, 1.0, E); line(x - sg * 0.3, ey + 1.3, x - sg * 0.3, ey + 4.2, 0.9, TEAR); }
+        else {
+          ell(x, ey, 1.9, 1.15, WH); ell(x, ey, 1.15, 1.15, '#3b2216'); ell(x, ey, 0.6, 0.6, E); ell(x - 0.35, ey - 0.4, 0.32, 0.32, WH);
+          var lid = mood !== 'low' ? 0.9 : 0.2; curve(x - 2.0, ey - lid * 0.4, x + 2.0, ey - lid * 0.4, mood !== 'low' ? -0.9 : -0.2, 0.9, E);
+        }
+        if (lash) line(ox, ey - 0.2, ox + sg * 0.9, ey - 1.0, 0.5, E);
+      });
+    }
+    if (B) {
+      var skin = '#d9946b', sh = '#b9704c', hair = '#2b1a14', hi = '#4a2f22', blush = '#e98a78', lip = '#b4455a', k;
+      ell(12, 11.2, 9.7, 10.5, hair); rect(2.4, 12, 4.6, 12, hair); rect(17, 12, 4.6, 12, hair);
+      ell(12, 27.5, 11.5, 6.5, skin, { y1: 24 }); rect(9.6, 17, 4.8, 5.5, sh);
+      curve(7.6, 21.3, 16.4, 21.3, 2.0, 0.45, GOLD); curve(8.6, 20.6, 15.4, 20.6, 1.2, 0.45, GOLD);
+      ell(12, 23.3, 0.9, 0.9, GOLD); ell(12, 22.1, 0.6, 0.6, GOLD); ell(12, 22.3, 0.3, 0.3, sh);
+      sell(12, 11.4, 6.1, 7.6, 2.2, skin); ell(16.8, 13.5, 2.2, 5.0, sh, { x0: 15.6 });
+      ell(7.4, 5.6, 4.2, 3.0, hair); ell(16.6, 5.6, 4.2, 3.0, hair); ell(5.5, 11.5, 1.6, 5.4, hair); ell(18.5, 11.5, 1.6, 5.4, hair);
+      for (k = 0; k < 7; k++) line(4 + k * 0.5, 6 + k * 1.2, 3.6 + k * 0.4, 12 + k * 1.3, 0.5, hi);
+      ell(8.4, 4.2, 2.4, 0.7, hi); ell(15.6, 4.2, 2.4, 0.7, hi);
+      ell(8.1, 14.0, 1.7, 1.0, blush); ell(15.9, 14.0, 1.7, 1.0, blush);
+      ell(12, 13.0, 0.95, 0.55, sh); var pi = Math.floor(10.7 * u), pj = Math.floor(13.2 * u); g[pj * N + pi] = sh;
+      ell(10.6, 13.4, 0.5, 0.5, GOLD);
+      eyes(2.9, 10.4, hair, 1.0, true);
+      var my = mood !== 'happy' ? 16.1 : 16.0;
+      if (mood === 'happy') { ell(12, my, 3.3, 1.9, lip); ell(12, my - 0.45, 2.9, 1.1, WH); ell(12, my + 0.6, 2.9, 0.9, '#7a2a3a', { y0: my + 0.4 }); }
+      else if (mood === 'good') curve(9.0, my - 0.3, 15.0, my - 0.3, 1.2, 0.8, lip);
+      else if (mood === 'neutral') line(9.6, my, 14.4, my, 0.8, lip);
+      else if (mood === 'low') curve(9.5, my + 0.5, 14.5, my + 0.5, -0.8, 0.8, lip);
+      else curve(9.0, my + 1.0, 15.0, my + 1.0, -1.6, 0.8, lip);
+    } else {
+      var skinL = '#cf9a74', shL = '#b27a58', hairL = '#3a2a20', hiL = '#6a5040', beardL = '#3a2d27', navy = '#26396b', lipL = '#a85a52';
+      var stub = hexMix(skinL, beardL, 0.42), chin = hexMix(skinL, beardL, 0.62), must = hexMix(skinL, beardL, 0.8);
+      ell(12, 28.5, 11.8, 7.5, navy, { y1: 24 }); rect(9.4, 17, 5.2, 5.5, shL);
+      shape(function (x, y) { return y >= 21 && y <= 24 && Math.abs(x - 12) < (y - 20.5) * 0.9 + 0.8 && Math.abs(x - 12) > (y - 20.5) * 0.9 - 0.4; }, '#34508f');
+      shape(function (x, y) { return y >= 21 && Math.abs(x - 12) < (y - 21) * 0.55 + 0.2; }, '#e8e4dc');
+      ell(5.2, 12, 1.2, 1.9, skinL); ell(18.8, 12, 1.2, 1.9, skinL); ell(5.3, 12, 0.5, 0.9, shL); ell(18.7, 12, 0.5, 0.9, shL);
+      sell(12, 11.8, 6.4, 7.9, 2.7, skinL); ell(17.0, 13.5, 2.2, 5.0, shL, { x0: 15.8 });
+      var inface = function (x, y) { return Math.pow(Math.abs(x - 12) / 6.4, 2.7) + Math.pow(Math.abs(y - 11.8) / 7.9, 2.7) <= 1; };
+      var inbeard = function (x, y) { return inface(x, y) && (y > 13.8 || (y > 11.0 && Math.abs(x - 12) > 5.0)); };
+      shape(inbeard, stub); shape(function (x, y) { return inbeard(x, y) && y > 17.6; }, chin);
+      ell(12, 16.3, 3.0, 1.35, '#b98a68');
+      ell(9.5, 15.0, 2.6, 0.8, must); ell(14.5, 15.0, 2.6, 0.8, must); rect(10.6, 14.6, 2.8, 0.8, must);
+      ell(12, 6.4, 7.0, 4.4, hairL, { y1: 8.0 }); ell(12, 6.0, 6.6, 3.8, hairL); ell(12, 9.3, 5.4, 1.2, skinL, { y0: 8.4 });
+      rect(5.6, 7.5, 1.4, 3.6, hairL); rect(17, 7.5, 1.4, 3.6, hairL); ell(10.2, 3.2, 3.2, 1.0, hiL);
+      for (k = 0; k < 6; k++) line(6.5 + k * 2, 4.2, 7.5 + k * 2, 2.4, 0.5, hiL);
+      ell(12, 13.1, 1.2, 0.6, shL); line(10.8, 10.8, 10.6, 13.0, 0.5, shL);
+      eyes(3.1, 10.4, hairL, 1.25, false);
+      var myl = 16.4;
+      if (mood === 'happy') { ell(12, myl, 2.9, 1.6, '#8a3a3a'); ell(12, myl - 0.5, 2.5, 0.9, WH); }
+      else if (mood === 'good') curve(9.6, myl - 0.2, 14.4, myl - 0.2, 1.0, 0.8, lipL);
+      else if (mood === 'neutral') line(9.8, myl, 14.2, myl, 0.8, lipL);
+      else if (mood === 'low') curve(9.7, myl + 0.4, 14.3, myl + 0.4, -0.7, 0.8, lipL);
+      else curve(9.4, myl + 0.8, 14.6, myl + 0.8, -1.4, 0.8, lipL);
+    }
+    ctx.clearRect(0, 0, N, N);
+    for (var q = 0; q < N * N; q++) if (g[q]) { ctx.fillStyle = g[q]; ctx.fillRect(q % N, Math.floor(q / N), 1, 1); }
+  }
+  var PTMP = document.createElement('canvas'); PTMP.width = 16; PTMP.height = 18;
+  function drawPortrait(cv, who, mood) {
+    var c = cv.getContext('2d');
+    if (CURSE[who] && !NOCURSE) {
+      var t = PTMP.getContext('2d'); t.clearRect(0, 0, 16, 18); head(t, who, mood, 0, 0, true);
+      c.clearRect(0, 0, 32, 32); c.imageSmoothingEnabled = false; c.drawImage(PTMP, 0, 0, 16, 18, 2, 0, 28, 32);
+    } else portrait(c, who, mood);
+  }
   var LABELS = ['Mal', 'Pas top', 'Bof', 'Bien', 'Au top'];
   var pickers = document.getElementById('pickers');
   var buttons = { bilge: [], lele: [] }, vbtn = {}, ubtn = {}, vmsg = {}, boxes = {}, draft = {}, titles = {}, pcv = { bilge: [], lele: [] };
@@ -1624,8 +1719,8 @@ dialog#logDlg::backdrop { background: rgba(10, 4, 16, .72); }
     for (var v = 1; v <= 5; v++) (function (v) {
       var b = document.createElement('button'); b.type = 'button'; b.className = 'mood';
       b.setAttribute('aria-pressed', 'false'); b.setAttribute('aria-label', NAMES[who] + ' : ' + LABELS[v - 1]);
-      var cv = document.createElement('canvas'); cv.width = 16; cv.height = 18; cv.setAttribute('aria-hidden', 'true');
-      head(cv.getContext('2d'), who, MOODNAMES[v - 1], 0, 0, true); pcv[who].push(cv);
+      var cv = document.createElement('canvas'); cv.width = 32; cv.height = 32; cv.setAttribute('aria-hidden', 'true');
+      drawPortrait(cv, who, MOODNAMES[v - 1]); pcv[who].push(cv);
       var sp = document.createElement('span'); sp.textContent = LABELS[v - 1];
       b.appendChild(cv); b.appendChild(sp);
       b.addEventListener('click', function () { pick(who, v); });
@@ -1639,7 +1734,7 @@ dialog#logDlg::backdrop { background: rgba(10, 4, 16, .72); }
   });
 
   function redrawPickers() {
-    ['bilge', 'lele'].forEach(function (w) { pcv[w].forEach(function (cv, i) { var x = cv.getContext('2d'); x.clearRect(0, 0, 16, 18); head(x, w, MOODNAMES[i], 0, 0, true); }); });
+    ['bilge', 'lele'].forEach(function (w) { pcv[w].forEach(function (cv, i) { drawPortrait(cv, w, MOODNAMES[i]); }); });
   }
   function sync() {
     ['bilge', 'lele'].forEach(function (who) {
@@ -2230,6 +2325,7 @@ dialog#logDlg::backdrop { background: rgba(10, 4, 16, .72); }
   // Pour ajouter une mise à jour : une entrée en haut de la liste (la plus récente d'abord).
   var CHANGELOG = [
     { date: '2026-10-29', title: 'Jeudi 29 octobre 2026', items: [
+      'Nouveaux portraits plus détaillés (d’après vos photos) dans les choix d’humeur, avec des tuiles plus grandes.',
       'Décor d’automne en fond d’écran : feuilles, glands, champignons et citrouilles, en violet ton sur ton, avec quelques feuilles qui tombent doucement.',
       'Citation du jour sous la date : une citation positive différente chaque jour, la même pour vous deux.',
       'Voyages : vote secret entre 4 villes (Paris, Rome, New York, Istanbul), départ à 10 votes, 2 jours sur place avec la météo du duo.',
